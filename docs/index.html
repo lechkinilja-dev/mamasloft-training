@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mama's Loft — Обучение</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@0.17.0/dist/browser.js" defer></script>
+  <style>
+    :root {
+      --clr-primary:       #8b9e7e;
+      --clr-primary-dark:  #6b7d61;
+      --clr-primary-light: #edf2e8;
+      --clr-secondary:     #2c2825;
+      --clr-surface:       #fdfbf7;
+      --clr-card:          #ffffff;
+      --clr-border:        #ede8e0;
+      --clr-text:          #2c2825;
+      --clr-text-muted:    #6a7282;
+      --clr-success:       #7fb069;
+      --clr-success-bg:    #edf2e8;
+      --clr-error:         #d97373;
+      --clr-error-bg:      #fdf0f0;
+      --clr-rose:          #c08b8b;
+      --font-heading:      'Inter', system-ui, sans-serif;
+      --font-body:         'Inter', system-ui, sans-serif;
+      --radius:            16px;
+      --shadow:            0 2px 12px rgba(44,40,37,.07);
+      --shadow-lg:         0 8px 32px rgba(44,40,37,.12);
+    }
+
+    /* ================================================================
+       RESET
+       ================================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-body); background: var(--clr-surface); color: var(--clr-text); min-height: 100vh; }
+    button { font-family: var(--font-body); cursor: pointer; }
+    button:disabled { opacity: .55; cursor: default; }
+
+    /* ================================================================
+       SCREENS
+       ================================================================ */
+    .screen { display: none; min-height: 100vh; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    /* ================================================================
+       LOGIN
+       ================================================================ */
+    #screen-login {
+      align-items: center; justify-content: center;
+      background: #f6f2ec;
+    }
+    .login-card {
+      background: var(--clr-card); border-radius: var(--radius); box-shadow: var(--shadow-lg);
+      padding: 48px 40px; width: 100%; max-width: 380px; text-align: center;
+    }
+    .brand { font-family: var(--font-heading); font-size: 22px; font-weight: 700; color: var(--clr-secondary); letter-spacing: .02em; margin-bottom: 6px; }
+    .brand span { color: var(--clr-primary); }
+    .login-card h1 { font-size: 17px; font-weight: 500; color: var(--clr-text); margin-bottom: 4px; }
+    .login-card p { color: var(--clr-text-muted); font-size: 14px; margin-bottom: 28px; }
+    .pin-row { display: flex; gap: 8px; }
+    .pin-row input {
+      flex: 1; padding: 13px 12px; border: 2px solid var(--clr-border); border-radius: 8px;
+      font-size: 20px; letter-spacing: 8px; text-align: center; outline: none;
+      transition: border-color .2s; font-family: monospace;
+    }
+    .pin-row input:focus { border-color: var(--clr-primary); box-shadow: 0 0 0 3px rgba(139,158,126,.15); }
+    .err { color: var(--clr-error); font-size: 13px; margin-top: 10px; min-height: 18px; }
+
+    /* ================================================================
+       SHARED BUTTONS
+       ================================================================ */
+    .btn-primary {
+      background: var(--clr-primary); color: #fff; border: none; border-radius: 10px;
+      padding: 13px 24px; font-size: 15px; font-weight: 600; transition: all .2s;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--clr-primary-dark); box-shadow: 0 4px 14px rgba(139,158,126,.3); }
+    .btn-ghost {
+      background: none; border: 1px solid var(--clr-border); border-radius: 6px;
+      padding: 6px 14px; font-size: 13px; color: var(--clr-text-muted); transition: all .2s;
+    }
+    .btn-ghost:hover { border-color: var(--clr-primary); color: var(--clr-primary); }
+
+    /* ================================================================
+       HEADER (shared)
+       ================================================================ */
+    .app-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 58px; background: var(--clr-secondary);
+      border-bottom: none; flex-shrink: 0;
+    }
+    .app-header .brand { color: #fdfbf7; font-size: 18px; }
+    .app-header .brand span { color: var(--clr-primary); }
+    .app-header .user-chip { color: rgba(253,251,247,.7); }
+    .app-header .btn-ghost { color: rgba(253,251,247,.6); border-color: rgba(253,251,247,.2); }
+    .app-header .btn-ghost:hover { color: #fdfbf7; border-color: var(--clr-primary); }
+    .user-chip { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--clr-text-muted); }
+
+    /* ================================================================
+       DASHBOARD
+       ================================================================ */
+    .dash-main { padding: 32px 24px; max-width: 960px; margin: 0 auto; width: 100%; }
+    .dash-main h2 { font-family: var(--font-heading); font-size: 24px; font-weight: 700; margin-bottom: 22px; color: var(--clr-secondary); }
+    .modules-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 18px; }
+    .module-card {
+      background: var(--clr-card); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 22px; cursor: pointer; transition: transform .2s, box-shadow .2s, border-color .2s;
+      border: 1px solid var(--clr-border);
+    }
+    .module-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--clr-primary); }
+    .module-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 14px; line-height: 1.4; }
+    .progress-wrap { height: 5px; background: var(--clr-border); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+    .progress-fill { height: 100%; background: var(--clr-primary); transition: width .4s; }
+    .progress-lbl { font-size: 12px; color: var(--clr-text-muted); margin-bottom: 12px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 5px; }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 100px; font-weight: 500; background: #f6f2ec; color: var(--clr-text-muted); }
+    .badge.done { background: var(--clr-success-bg); color: var(--clr-primary-dark); }
+
+    /* ================================================================
+       MODULE SCREEN
+       ================================================================ */
+    .mod-header { display: flex; align-items: center; gap: 14px; padding: 0 20px; height: 54px; background: var(--clr-secondary); border-bottom: none; flex-shrink: 0; }
+    .mod-header h2 { color: #fdfbf7; }
+    .btn-back { background: none; border: none; font-size: 20px; color: rgba(253,251,247,.6); padding: 4px 8px; line-height: 1; }
+    .btn-back:hover { color: var(--clr-primary); }
+    .mod-header h2 { font-size: 17px; font-weight: 600; }
+    .mod-tabs { display: flex; padding: 0 20px; background: var(--clr-card); border-bottom: 1px solid var(--clr-border); overflow-x: auto; flex-shrink: 0; }
+    .tab-btn { padding: 13px 18px; border: none; background: none; font-size: 14px; font-weight: 500; color: var(--clr-text-muted); border-bottom: 2px solid transparent; transition: all .2s; white-space: nowrap; }
+    .tab-btn:hover { color: var(--clr-primary-dark); }
+    .tab-btn.active { color: var(--clr-primary-dark); border-bottom-color: var(--clr-primary); }
+    .tab-scroll { flex: 1; overflow-y: auto; }
+    .tab-panel { display: none; padding: 28px 24px; max-width: 800px; margin: 0 auto; }
+    .tab-panel.active { display: block; }
+    .section-next { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--clr-border); }
+
+    /* ================================================================
+       LECTURE
+       ================================================================ */
+    .lecture-body { font-size: 16px; line-height: 1.78; }
+    .lecture-body h2 { font-family: var(--font-heading); font-size: 20px; font-weight: 700; margin: 26px 0 12px; color: var(--clr-secondary); }
+    .lecture-body h3 { font-size: 16px; font-weight: 600; margin: 18px 0 8px; }
+    .lecture-body p { margin-bottom: 13px; }
+    .lecture-body ul, .lecture-body ol { padding-left: 22px; margin-bottom: 13px; }
+    .lecture-body li { margin-bottom: 5px; }
+    .lecture-body strong { color: var(--clr-secondary); font-weight: 600; }
+
+    /* ================================================================
+       MINDMAP
+       ================================================================ */
+    #mindmap-container { width: 100%; height: 480px; border: 1px solid var(--clr-border); border-radius: var(--radius); overflow: hidden; background: var(--clr-card); }
+    #mindmap-container .markmap { width: 100%; height: 100%; }
+
+    /* ================================================================
+       QUIZ
+       ================================================================ */
+    .quiz-dots { display: flex; gap: 7px; margin-bottom: 22px; }
+    .qdot { width: 11px; height: 11px; border-radius: 50%; background: var(--clr-border); transition: background .2s; }
+    .qdot.cur { background: var(--clr-primary); }
+    .qdot.ok  { background: var(--clr-success); }
+    .qdot.err { background: var(--clr-error); }
+    .quiz-q { font-size: 18px; font-weight: 600; line-height: 1.5; margin-bottom: 20px; }
+    .quiz-opts { display: flex; flex-direction: column; gap: 9px; margin-bottom: 18px; }
+    .quiz-opt {
+      padding: 13px 16px; border: 2px solid var(--clr-border); border-radius: 8px;
+      font-size: 15px; text-align: left; background: var(--clr-card); transition: all .15s;
+    }
+    .quiz-opt:hover:not(:disabled) { border-color: var(--clr-primary); background: #f6f2ec; }
+    .quiz-opt.c { border-color: var(--clr-success); background: var(--clr-success-bg); color: var(--clr-primary-dark); font-weight: 600; }
+    .quiz-opt.w { border-color: var(--clr-error); background: var(--clr-error-bg); color: #a85757; }
+    .quiz-fb { display: none; font-size: 14px; line-height: 1.6; padding: 11px 15px; border-radius: 8px; margin-bottom: 14px; }
+    .quiz-fb.show { display: block; }
+    .quiz-fb.ok { background: var(--clr-success-bg); color: #065F46; }
+    .quiz-fb.err { background: var(--clr-error-bg); color: #991B1B; }
+    .quiz-result { display: none; text-align: center; padding: 36px 0; }
+    .quiz-result.show { display: block; }
+    .score-num { font-family: var(--font-heading); font-size: 72px; font-weight: 700; color: var(--clr-primary-dark); line-height: 1; }
+    .score-sub { font-size: 15px; color: var(--clr-text-muted); margin: 10px 0 26px; }
+
+    /* ================================================================
+       SIM
+       ================================================================ */
+    .sim-brief { background: #f6f2ec; border-radius: var(--radius); padding: 14px 18px; margin-bottom: 18px; font-size: 14px; line-height: 1.6; }
+    .sim-brief strong { color: var(--clr-secondary); }
+    .sim-chat {
+      display: flex; flex-direction: column; gap: 11px;
+      max-height: 380px; overflow-y: auto; padding: 14px;
+      background: var(--clr-card); border: 1px solid var(--clr-border);
+      border-radius: var(--radius); margin-bottom: 14px;
+    }
+    .sim-msg { display: flex; gap: 8px; }
+    .sim-msg.staff { flex-direction: row-reverse; }
+    .sim-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--clr-border); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .sim-bubble { max-width: 76%; padding: 9px 13px; border-radius: 14px; font-size: 14px; line-height: 1.55; }
+    .sim-msg.customer .sim-bubble { background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: 14px 14px 14px 4px; }
+    .sim-msg.staff    .sim-bubble { background: var(--clr-primary-dark); color: #fff; border-radius: 14px 14px 4px 14px; }
+    .sim-input-row { display: flex; gap: 9px; }
+    .sim-input-row textarea {
+      flex: 1; padding: 11px 13px; border: 2px solid var(--clr-border); border-radius: 8px;
+      font-size: 14px; resize: none; min-height: 68px; outline: none; font-family: var(--font-body); transition: border-color .2s;
+    }
+    .sim-input-row textarea:focus { border-color: var(--clr-primary); box-shadow: 0 0 0 3px rgba(139,158,126,.15); }
+    .typing { color: var(--clr-text-muted); font-size: 12px; font-style: italic; padding: 4px 8px; }
+
+    /* ================================================================
+       MOBILE
+       ================================================================ */
+    @media (max-width: 600px) {
+      .login-card { padding: 36px 24px; margin: 0 16px; }
+      .brand { font-size: 22px; }
+
+      .app-header { padding: 0 14px; height: 50px; }
+      .user-chip { gap: 8px; font-size: 13px; }
+
+      .dash-main { padding: 20px 14px; }
+      .dash-main h2 { font-size: 21px; margin-bottom: 16px; }
+      .modules-grid { grid-template-columns: 1fr; gap: 12px; }
+      .module-card { padding: 16px; }
+
+      .mod-header { padding: 0 12px; height: 48px; gap: 10px; }
+      .mod-header h2 { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .mod-tabs { padding: 0 8px; }
+      .tab-btn { padding: 11px 12px; font-size: 13px; }
+      .tab-panel { padding: 20px 14px; }
+
+      .lecture-body { font-size: 15px; line-height: 1.7; }
+      .lecture-body h2 { font-size: 18px; margin: 20px 0 10px; }
+
+      #mindmap-container { height: 320px; }
+
+      .quiz-q { font-size: 16px; }
+      .quiz-opt { padding: 12px 14px; font-size: 14px; }
+      .score-num { font-size: 56px; }
+
+      .sim-chat { max-height: 300px; padding: 10px; }
+      .sim-bubble { max-width: 85%; font-size: 14px; }
+      .sim-input-row textarea { min-height: 52px; font-size: 14px; }
+    }
+
+    @media (max-width: 380px) {
+      .login-card { padding: 28px 18px; }
+      .pin-row input { font-size: 18px; letter-spacing: 5px; padding: 11px 8px; }
+      .modules-grid { gap: 10px; }
+      .tab-btn { padding: 10px 8px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ================================================================
+     LOGIN
+================================================================ -->
+<div id="screen-login" class="screen active">
+  <div class="login-card">
+    <div class="brand">Mama's <span>Loft</span></div>
+    <h1>Обучение сотрудников</h1>
+    <p>Введите ваш PIN-код</p>
+    <div class="pin-row">
+      <input type="password" id="pin-input" maxlength="6" placeholder="••••••"
+             autocomplete="current-password" inputmode="numeric" />
+      <button class="btn-primary" id="login-btn">Войти</button>
+    </div>
+    <div class="err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ================================================================
+     DASHBOARD
+================================================================ -->
+<div id="screen-dashboard" class="screen">
+  <header class="app-header">
+    <div class="brand">Mama's <span>Loft</span></div>
+    <div class="user-chip">
+      <span id="user-label"></span>
+      <button class="btn-ghost" id="logout-btn">Выйти</button>
+    </div>
+  </header>
+  <div class="dash-main">
+    <h2>Модули обучения</h2>
+    <div class="modules-grid" id="modules-grid"></div>
+  </div>
+</div>
+
+<!-- ================================================================
+     MODULE
+================================================================ -->
+<div id="screen-module" class="screen">
+  <div class="mod-header">
+    <button class="btn-back" id="back-btn" title="К списку">←</button>
+    <h2 id="mod-title"></h2>
+  </div>
+  <nav class="mod-tabs">
+    <button class="tab-btn active" data-tab="lecture">📖 Лекция</button>
+    <button class="tab-btn"        data-tab="mindmap">🗺 Карта знаний</button>
+    <button class="tab-btn"        data-tab="quiz">✅ Тест</button>
+    <button class="tab-btn"        data-tab="sim">💬 Тренажёр</button>
+  </nav>
+  <div class="tab-scroll">
+
+    <!-- LECTURE -->
+    <div class="tab-panel active" id="tab-lecture">
+      <div class="lecture-body" id="lecture-body"></div>
+      <div class="section-next">
+        <button class="btn-primary" id="lecture-next-btn">Карта знаний →</button>
+      </div>
+    </div>
+
+    <!-- MINDMAP -->
+    <div class="tab-panel" id="tab-mindmap">
+      <div id="mindmap-container"></div>
+      <div class="section-next">
+        <button class="btn-primary" id="mindmap-next-btn">Перейти к тесту →</button>
+      </div>
+    </div>
+
+    <!-- QUIZ -->
+    <div class="tab-panel" id="tab-quiz">
+      <div class="quiz-dots" id="quiz-dots"></div>
+      <div class="quiz-q"    id="quiz-q"></div>
+      <div class="quiz-opts" id="quiz-opts"></div>
+      <div class="quiz-fb"   id="quiz-fb"></div>
+      <button class="btn-primary" id="quiz-next-btn" style="display:none">Следующий →</button>
+      <div class="quiz-result" id="quiz-result">
+        <div class="score-num" id="score-num"></div>
+        <div class="score-sub" id="score-sub"></div>
+        <button class="btn-primary" id="quiz-to-sim-btn">Перейти к тренажёру →</button>
+      </div>
+    </div>
+
+    <!-- SIM -->
+    <div class="tab-panel" id="tab-sim">
+      <div class="sim-brief" id="sim-brief"></div>
+      <div class="sim-chat"  id="sim-chat"></div>
+      <div class="sim-input-row">
+        <textarea id="sim-input" placeholder="Напишите ответ покупателю…" rows="3"></textarea>
+        <button class="btn-primary" id="sim-send-btn">Отправить</button>
+      </div>
+    </div>
+
+  </div><!-- tab-scroll -->
+</div><!-- screen-module -->
+
+<script>
+/* ================================================================
+   CONFIG
+   Замените APPS_SCRIPT_URL на URL задеплоенного Apps Script Web App.
+   content.json должен лежать рядом с index.html (или укажите полный URL).
+================================================================ */
+const CFG = {
+  appsScriptUrl: 'REPLACE_WITH_YOUR_APPS_SCRIPT_WEB_APP_URL',
+  contentUrl:    'content.json',
+  demoMode:      true,  // true = офлайн без Apps Script; false = продакшен
+};
+
+/* ================================================================
+   STATE
+================================================================ */
+let S = {
+  user:    null,   // {pin, name, role}
+  modules: [],     // массив из content.json
+  modIdx:  null,   // индекс текущего модуля
+  prog:    {},     // {topicTitle: {lecture, mindmap, quiz/*число*/, sim}}
+  quiz:    null,   // {topicId, idx, answers:[bool]}
+  sim:     null,   // {topicId, messages:[{role,content}]}
+};
+
+/* ================================================================
+   API
+================================================================ */
+async function api(route, body = {}) {
+  if (CFG.demoMode) return demoApi(route, body);
+  const r = await fetch(CFG.appsScriptUrl, {
+    method: 'POST',
+    body: JSON.stringify({ route, ...body }),
+    headers: { 'Content-Type': 'text/plain' },
+    redirect: 'follow',
+  });
+  return r.json();
+}
+
+function demoApi(route, body) {
+  if (route === 'auth') return { ok: true, name: 'Демо-сотрудник', role: 'consultant' };
+  if (route === 'progress_get') return { ok: true, progress: {} };
+  if (route === 'progress' || route === 'test') return { ok: true };
+  if (route === 'sim') {
+    const brief = body.sim_brief || {};
+    const msgs = body.messages || [];
+    const turn = msgs.filter(m => m.role === 'user').length;
+    const replies = [
+      `Здравствуйте! ${brief.need || 'Мне нужна помощь с выбором.'}`,
+      brief.objections?.[0] || 'Хмм, я не уверена...',
+      brief.objections?.[1] || 'А это точно подойдёт?',
+      brief.objections?.[2] || 'Мне кажется, это дороговато.',
+      'Хорошо, вы меня убедили! Беру.',
+    ];
+    return { ok: true, reply: replies[Math.min(turn, replies.length - 1)] };
+  }
+  return { ok: false, error: 'Unknown route' };
+}
+
+/* ================================================================
+   SCREENS
+================================================================ */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ================================================================
+   LOGIN
+================================================================ */
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('pin-input').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
+
+async function doLogin() {
+  const pin = document.getElementById('pin-input').value.trim();
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  if (!pin) return;
+
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const res = await api('auth', { pin });
+    if (res.ok) {
+      S.user = { pin, name: res.name, role: res.role };
+      localStorage.setItem('tp_u', JSON.stringify(S.user));
+      await loadProgress();
+      renderDash();
+      show('screen-dashboard');
+    } else {
+      errEl.textContent = 'Неверный PIN. Попробуйте ещё раз.';
+    }
+  } catch {
+    errEl.textContent = 'Ошибка соединения. Проверьте интернет.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Войти';
+  }
+}
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+  S.user = null; S.prog = {};
+  localStorage.removeItem('tp_u');
+  document.getElementById('pin-input').value = '';
+  show('screen-login');
+});
+
+/* ================================================================
+   INIT
+================================================================ */
+async function init() {
+  const r = await fetch(CFG.contentUrl);
+  S.modules = await r.json();
+
+  const saved = localStorage.getItem('tp_u');
+  if (saved) {
+    S.user = JSON.parse(saved);
+    await loadProgress();
+    renderDash();
+    show('screen-dashboard');
+  }
+}
+
+async function loadProgress() {
+  try {
+    const r = await api('progress_get', { pin: S.user.pin });
+    if (r.progress) S.prog = { ...S.prog, ...r.progress };
+  } catch { /* offline — use localStorage */ }
+  const local = JSON.parse(localStorage.getItem('tp_p') || '{}');
+  // Merge: backend wins for numeric quiz scores, local fills gaps
+  for (const [k, v] of Object.entries(local)) {
+    if (!S.prog[k]) S.prog[k] = v;
+  }
+}
+
+function saveProgLocal() { localStorage.setItem('tp_p', JSON.stringify(S.prog)); }
+
+function ensureProg(topic) { if (!S.prog[topic]) S.prog[topic] = {}; }
+
+/* ================================================================
+   DASHBOARD
+================================================================ */
+function renderDash() {
+  document.getElementById('user-label').textContent = S.user.name || S.user.pin;
+  const grid = document.getElementById('modules-grid');
+  grid.innerHTML = '';
+  S.modules.forEach((m, i) => {
+    const p = S.prog[m.topic] || {};
+    const stages = ['lecture','mindmap','quiz','sim'];
+    const done = stages.filter(s => p[s] !== undefined && p[s] !== false).length;
+    const pct  = Math.round(done / stages.length * 100);
+
+    const card = document.createElement('div');
+    card.className = 'module-card';
+    card.innerHTML = `
+      <h3>${esc(m.topic)}</h3>
+      <div class="progress-wrap"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="progress-lbl">${done} / ${stages.length} этапов завершено</div>
+      <div class="badges">
+        <span class="badge ${p.lecture  ? 'done':''}">📖 Лекция</span>
+        <span class="badge ${p.mindmap  ? 'done':''}">🗺 Карта</span>
+        <span class="badge ${p.quiz != null ? 'done':''}">✅ Тест${p.quiz != null ? ' '+p.quiz+'%' :''}</span>
+        <span class="badge ${p.sim      ? 'done':''}">💬 Тренажёр</span>
+      </div>
+    `;
+    card.addEventListener('click', () => openModule(i));
+    grid.appendChild(card);
+  });
+}
+
+/* ================================================================
+   MODULE
+================================================================ */
+document.getElementById('back-btn').addEventListener('click', () => { renderDash(); show('screen-dashboard'); });
+
+document.querySelectorAll('.tab-btn').forEach(b =>
+  b.addEventListener('click', () => switchTab(b.dataset.tab))
+);
+
+function openModule(idx) {
+  S.modIdx = idx;
+  document.getElementById('mod-title').textContent = S.modules[idx].topic;
+  show('screen-module');
+  switchTab('lecture');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  const m = S.modules[S.modIdx];
+  if (tab === 'lecture') renderLecture(m);
+  if (tab === 'mindmap') renderMindmap(m);
+  if (tab === 'quiz')    renderQuiz(m);
+  if (tab === 'sim')     renderSim(m);
+}
+
+/* ================================================================
+   LECTURE
+================================================================ */
+document.getElementById('lecture-next-btn').addEventListener('click', async () => {
+  const m = S.modules[S.modIdx];
+  ensureProg(m.topic); S.prog[m.topic].lecture = true; saveProgLocal();
+  api('progress', { pin: S.user.pin, topic: m.topic, stage: 'lecture' }).catch(() => {});
+  switchTab('mindmap');
+});
+
+function renderLecture(m) {
+  document.getElementById('lecture-body').innerHTML = m.lecture_html || '<p>Контент недоступен.</p>';
+}
+
+/* ================================================================
+   MINDMAP
+================================================================ */
+document.getElementById('mindmap-next-btn').addEventListener('click', async () => {
+  const m = S.modules[S.modIdx];
+  ensureProg(m.topic); S.prog[m.topic].mindmap = true; saveProgLocal();
+  api('progress', { pin: S.user.pin, topic: m.topic, stage: 'mindmap' }).catch(() => {});
+  switchTab('quiz');
+});
+
+function renderMindmap(m) {
+  const container = document.getElementById('mindmap-container');
+  const md = m.mindmap_md || buildMdFromNodes(m.mindmap);
+  if (!md) { container.textContent = 'Карта знаний недоступна.'; return; }
+
+  // Build markmap div via DOM (safe: no innerHTML with markdown)
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'markmap';
+  wrap.style.cssText = 'width:100%;height:480px';
+  const tmpl = document.createElement('script');
+  tmpl.type = 'text/template';
+  tmpl.textContent = md;      // textContent — never parsed as HTML
+  wrap.appendChild(tmpl);
+  container.appendChild(wrap);
+
+  // Trigger markmap autoloader (may fire after DOMContentLoaded)
+  const activate = () => {
+    const mm = window.markmap;
+    if (mm && mm.autoLoader) { mm.autoLoader.renderAll(); return; }
+    // Direct API fallback (markmap-view + markmap-lib bundles)
+    if (mm && mm.Transformer && mm.Markmap) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.style.cssText = 'width:100%;height:480px';
+      container.innerHTML = '';
+      container.appendChild(svg);
+      const { root } = new mm.Transformer().transform(md);
+      mm.Markmap.create(svg, null, root);
+    }
+  };
+  // Give autoloader script a tick to initialize
+  setTimeout(activate, 80);
+}
+
+function buildMdFromNodes(mindmap) {
+  if (!mindmap || !mindmap.nodes) return null;
+  const { nodes, edges } = mindmap;
+  const children = {};
+  const hasParent = new Set();
+  (edges || []).forEach(e => {
+    (children[e.from] ||= []).push(e.to);
+    hasParent.add(e.to);
+  });
+  const nodeMap = Object.fromEntries(nodes.map(n => [n.id, n.label]));
+  const roots = nodes.filter(n => !hasParent.has(n.id));
+
+  function walk(id, depth) {
+    const prefix = '#'.repeat(Math.min(depth, 6));
+    let md = `${prefix} ${nodeMap[id] || id}\n`;
+    (children[id] || []).forEach(cid => { md += walk(cid, depth + 1); });
+    return md;
+  }
+  return roots.map(r => walk(r.id, 1)).join('\n');
+}
+
+/* ================================================================
+   QUIZ
+================================================================ */
+document.getElementById('quiz-next-btn').addEventListener('click', () => {
+  const m = S.modules[S.modIdx];
+  S.quiz.idx++;
+  if (S.quiz.idx < m.quiz.length) showQuestion(m);
+  else finishQuiz(m);
+});
+document.getElementById('quiz-to-sim-btn').addEventListener('click', () => switchTab('sim'));
+
+function renderQuiz(m) {
+  const p = S.prog[m.topic] || {};
+  if (p.quiz != null && !S.quiz) { showQuizResult(p.quiz); return; }
+  if (!S.quiz || S.quiz.topicId !== m.topic) {
+    S.quiz = { topicId: m.topic, idx: 0, answers: [] };
+  }
+  showQuestion(m);
+}
+
+function showQuestion(m) {
+  const q = m.quiz[S.quiz.idx];
+  document.getElementById('quiz-result').classList.remove('show');
+  document.getElementById('quiz-next-btn').style.display = 'none';
+
+  // Dots
+  document.getElementById('quiz-dots').innerHTML = m.quiz.map((_, i) => {
+    const a = S.quiz.answers[i];
+    let cls = 'qdot';
+    if (i === S.quiz.idx) cls += ' cur';
+    else if (a === true)  cls += ' ok';
+    else if (a === false) cls += ' err';
+    return `<div class="${cls}"></div>`;
+  }).join('');
+
+  document.getElementById('quiz-q').textContent = `${S.quiz.idx + 1}. ${q.q}`;
+  document.getElementById('quiz-fb').className = 'quiz-fb';
+
+  const optEl = document.getElementById('quiz-opts');
+  optEl.innerHTML = q.options.map((o, i) =>
+    `<button class="quiz-opt" data-i="${i}">${esc(o)}</button>`
+  ).join('');
+  optEl.querySelectorAll('.quiz-opt').forEach(btn =>
+    btn.addEventListener('click', () => answerQ(+btn.dataset.i, m))
+  );
+}
+
+function answerQ(idx, m) {
+  const q = m.quiz[S.quiz.idx];
+  const correct = idx === q.correct;
+  S.quiz.answers[S.quiz.idx] = correct;
+
+  document.querySelectorAll('.quiz-opt').forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.correct) btn.classList.add('c');
+    else if (i === idx && !correct) btn.classList.add('w');
+  });
+
+  const fb = document.getElementById('quiz-fb');
+  fb.textContent = (correct ? '✅ ' : '❌ ') + q.explain;
+  fb.className = `quiz-fb show ${correct ? 'ok' : 'err'}`;
+
+  const dots = document.getElementById('quiz-dots').children;
+  dots[S.quiz.idx]?.classList.replace('cur', correct ? 'ok' : 'err');
+
+  const nextBtn = document.getElementById('quiz-next-btn');
+  nextBtn.style.display = 'inline-block';
+  nextBtn.textContent = S.quiz.idx === m.quiz.length - 1 ? 'Завершить тест →' : 'Следующий →';
+}
+
+async function finishQuiz(m) {
+  const correct = S.quiz.answers.filter(Boolean).length;
+  const score = Math.round(correct / m.quiz.length * 100);
+
+  ensureProg(m.topic); S.prog[m.topic].quiz = score; saveProgLocal();
+  api('test', { pin: S.user.pin, topic: m.topic, score, answers: S.quiz.answers }).catch(() => {});
+
+  showQuizResult(score);
+  S.quiz = null;
+}
+
+function showQuizResult(score) {
+  ['quiz-dots','quiz-q','quiz-opts'].forEach(id => document.getElementById(id).innerHTML = '');
+  document.getElementById('quiz-fb').className = 'quiz-fb';
+  document.getElementById('quiz-next-btn').style.display = 'none';
+
+  document.getElementById('score-num').textContent = score + '%';
+  document.getElementById('score-sub').textContent =
+    score >= 80 ? '🎉 Отличный результат!' :
+    score >= 60 ? '👍 Неплохо! Можно повторить лекцию.' :
+                  '📚 Стоит перечитать материал ещё раз.';
+  document.getElementById('quiz-result').classList.add('show');
+}
+
+/* ================================================================
+   SIM
+================================================================ */
+document.getElementById('sim-send-btn').addEventListener('click', sendSim);
+document.getElementById('sim-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendSim(); }
+});
+
+function renderSim(m) {
+  const brief = m.sim_brief || {};
+  document.getElementById('sim-brief').innerHTML =
+    `<strong>Персонаж:</strong> ${esc(brief.persona || '—')}<br/>` +
+    `<strong>Запрос:</strong> ${esc(brief.need || '—')}<br/>` +
+    `<strong>Критерии оценки:</strong>${(brief.rubric || []).map(r => `<br/>• ${esc(r)}`).join('')}`;
+
+  if (!S.sim || S.sim.topicId !== m.topic) {
+    S.sim = { topicId: m.topic, messages: [] };
+    document.getElementById('sim-chat').innerHTML = '';
+    // Показываем открывающую реплику покупателя (не отправляется в API)
+    addBubble('customer', brief.need ? `Добрый день! ${brief.need}` : 'Добрый день, могу я вам помочь?');
+  }
+}
+
+function addBubble(who, text) {
+  const chat = document.getElementById('sim-chat');
+  const d = document.createElement('div');
+  d.className = `sim-msg ${who}`;
+  d.innerHTML = `<div class="sim-avatar">${who === 'staff' ? '🧑' : '🛍️'}</div>
+    <div class="sim-bubble">${esc(text)}</div>`;
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendSim() {
+  const ta = document.getElementById('sim-input');
+  const text = ta.value.trim();
+  const btn = document.getElementById('sim-send-btn');
+  if (!text || btn.disabled) return;
+
+  ta.value = '';
+  addBubble('staff', text);
+  S.sim.messages.push({ role: 'user', content: text });
+
+  btn.disabled = true;
+  const typing = document.createElement('div');
+  typing.className = 'typing';
+  typing.textContent = 'Покупатель печатает…';
+  document.getElementById('sim-chat').appendChild(typing);
+  document.getElementById('sim-chat').scrollTop = 9999;
+
+  try {
+    const m = S.modules[S.modIdx];
+    const res = await api('sim', {
+      pin:       S.user.pin,
+      topic:     m.topic,
+      sim_brief: m.sim_brief,
+      messages:  S.sim.messages,
+    });
+    typing.remove();
+    const reply = res.reply || '…';
+    addBubble('customer', reply);
+    S.sim.messages.push({ role: 'assistant', content: reply });
+
+    ensureProg(m.topic);
+    if (!S.prog[m.topic].sim) {
+      S.prog[m.topic].sim = true; saveProgLocal();
+      api('progress', { pin: S.user.pin, topic: m.topic, stage: 'sim' }).catch(() => {});
+    }
+  } catch {
+    typing.remove();
+    addBubble('customer', '(Ошибка соединения — попробуйте ещё раз)');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ================================================================
+   UTILS
+================================================================ */
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ================================================================
+   BOOT
+================================================================ */
+init().catch(console.error);
+</script>
+</body>
+</html>
