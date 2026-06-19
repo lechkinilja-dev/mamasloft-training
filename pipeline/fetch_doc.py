@@ -85,14 +85,12 @@ def main() -> None:
     names = _parse_readme()
     print(f"Found {len(names)} product cards in README.md")
 
-    cross_refs = _load_cross_refs()
     topics = []
 
     for name in names:
         card_path = VAULT / f"{name}.md"
         content = _extract_card_content(card_path)
-        full_content = f"{content}\n\n{cross_refs}"
-        topics.append({"title": name, "content": full_content})
+        topics.append({"title": name, "content": content})
         print(f"  • {name} ({len(content)} chars)")
 
     OUTPUT_DIR.mkdir(exist_ok=True)
