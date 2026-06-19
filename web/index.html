@@ -6,7 +6,9 @@
   <title>Mama's Loft — Обучение</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@0.17.0/dist/browser.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.17.0/dist/browser/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.17.0/dist/browser/index.js"></script>
   <style>
     :root {
       --clr-primary:       #8b9e7e;
@@ -564,33 +566,21 @@ function renderMindmap(m) {
   const md = m.mindmap_md || buildMdFromNodes(m.mindmap);
   if (!md) { container.textContent = 'Карта знаний недоступна.'; return; }
 
-  // Build markmap div via DOM (safe: no innerHTML with markdown)
   container.innerHTML = '';
-  const wrap = document.createElement('div');
-  wrap.className = 'markmap';
-  wrap.style.cssText = 'width:100%;height:480px';
-  const tmpl = document.createElement('script');
-  tmpl.type = 'text/template';
-  tmpl.textContent = md;      // textContent — never parsed as HTML
-  wrap.appendChild(tmpl);
-  container.appendChild(wrap);
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.style.cssText = 'width:100%;height:100%';
+  container.appendChild(svg);
 
-  // Trigger markmap autoloader (may fire after DOMContentLoaded)
-  const activate = () => {
-    const mm = window.markmap;
-    if (mm && mm.autoLoader) { mm.autoLoader.renderAll(); return; }
-    // Direct API fallback (markmap-view + markmap-lib bundles)
-    if (mm && mm.Transformer && mm.Markmap) {
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.style.cssText = 'width:100%;height:480px';
-      container.innerHTML = '';
-      container.appendChild(svg);
-      const { root } = new mm.Transformer().transform(md);
-      mm.Markmap.create(svg, null, root);
-    }
-  };
-  // Give autoloader script a tick to initialize
-  setTimeout(activate, 80);
+  try {
+    const { Transformer } = markmap;
+    const { Markmap } = markmap;
+    const transformer = new Transformer();
+    const { root } = transformer.transform(md);
+    Markmap.create(svg, { autoFit: true }, root);
+  } catch(e) {
+    container.textContent = 'Ошибка загрузки карты знаний.';
+    console.error('Markmap error:', e);
+  }
 }
 
 function buildMdFromNodes(mindmap) {
