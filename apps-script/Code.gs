@@ -9,6 +9,7 @@ function doPost(e) {
     if (route === 'progress_get') return json(doProgressGet(body));
     if (route === 'progress') return json(doProgress(body));
     if (route === 'test') return json(doTest(body));
+    if (route === 'admin_data') return json(doAdminData());
 
     return json({ ok: false, error: 'Unknown route' });
   } catch (err) {
@@ -204,6 +205,58 @@ function stageNameToKey(name) {
   if (name === 'Карта знаний') return 'mindmap';
   if (name === 'Тест') return 'quiz';
   return name;
+}
+
+function doAdminData() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+
+  var svod = ss.getSheetByName('Свод ');
+  var svodData = svod.getDataRange().getValues();
+  var users = [];
+  for (var i = 0; i < svodData.length; i++) {
+    var name = String(svodData[i][1]).trim();
+    var pin = String(svodData[i][2]).trim();
+    if (name && pin && /^\d+$/.test(pin)) {
+      users.push({ name: name });
+    }
+  }
+
+  var status = ss.getSheetByName('Статус обучения');
+  var statusData = status.getDataRange().getValues();
+  var header = statusData[0];
+
+  var modules = [];
+  var seen = {};
+  for (var r = 1; r < statusData.length; r++) {
+    var topic = String(statusData[r][0]).trim();
+    if (topic && !seen[topic]) { modules.push(topic); seen[topic] = true; }
+  }
+
+  var progress = {};
+  for (var c = 2; c < header.length; c++) {
+    var userName = String(header[c]).trim();
+    if (!userName) continue;
+    progress[userName] = {};
+
+    for (var r = 1; r < statusData.length; r++) {
+      var topic = String(statusData[r][0]).trim();
+      var stage = String(statusData[r][1]).trim();
+      var val = statusData[r][c];
+
+      if (!progress[userName][topic]) progress[userName][topic] = {};
+
+      if (val !== '' && val !== null && val !== undefined) {
+        var stageKey = stageNameToKey(stage);
+        if (stageKey === 'quiz') {
+          progress[userName][topic][stageKey] = Number(val);
+        } else {
+          progress[userName][topic][stageKey] = true;
+        }
+      }
+    }
+  }
+
+  return { ok: true, users: users, modules: modules, progress: progress };
 }
 
 function json(obj) {

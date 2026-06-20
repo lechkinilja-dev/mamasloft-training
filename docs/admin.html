@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mama's Loft — Панель управления</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --clr-primary:       #8b9e7e;
+      --clr-primary-dark:  #6b7d61;
+      --clr-primary-light: #edf2e8;
+      --clr-secondary:     #2c2825;
+      --clr-surface:       #fdfbf7;
+      --clr-card:          #ffffff;
+      --clr-border:        #ede8e0;
+      --clr-text:          #2c2825;
+      --clr-text-muted:    #6a7282;
+      --clr-success:       #7fb069;
+      --clr-success-bg:    #edf2e8;
+      --clr-error:         #d97373;
+      --clr-error-bg:      #fdf0f0;
+      --clr-warn:          #e2b93b;
+      --clr-warn-bg:       #fdf8e8;
+      --font-heading:      'Inter', system-ui, sans-serif;
+      --font-body:         'Inter', system-ui, sans-serif;
+      --radius:            16px;
+      --shadow:            0 2px 12px rgba(44,40,37,.07);
+      --shadow-lg:         0 8px 32px rgba(44,40,37,.12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-body); background: var(--clr-surface); color: var(--clr-text); min-height: 100vh; }
+    button { font-family: var(--font-body); cursor: pointer; }
+
+    /* HEADER */
+    .app-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 58px; background: var(--clr-secondary); flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .brand { font-family: var(--font-heading); font-size: 18px; font-weight: 700; color: #fdfbf7; letter-spacing: .02em; }
+    .brand span { color: var(--clr-primary); }
+    .header-tag { font-size: 12px; color: rgba(253,251,247,.5); background: rgba(253,251,247,.08); padding: 3px 10px; border-radius: 100px; }
+    .btn-refresh {
+      background: none; border: 1px solid rgba(253,251,247,.2); border-radius: 6px;
+      padding: 6px 14px; font-size: 13px; color: rgba(253,251,247,.6); transition: all .2s;
+    }
+    .btn-refresh:hover { color: #fdfbf7; border-color: var(--clr-primary); }
+
+    /* MAIN */
+    .main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+
+    /* LOADING */
+    .loading { text-align: center; padding: 80px 0; color: var(--clr-text-muted); font-size: 16px; }
+
+    /* STATS */
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--clr-card); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 20px 22px; border: 1px solid var(--clr-border); text-align: center;
+    }
+    .stat-num { font-family: var(--font-heading); font-size: 36px; font-weight: 700; color: var(--clr-primary-dark); line-height: 1.1; }
+    .stat-label { font-size: 13px; color: var(--clr-text-muted); margin-top: 4px; }
+
+    /* EMPLOYEE TABLE */
+    .section-title { font-family: var(--font-heading); font-size: 20px; font-weight: 700; color: var(--clr-secondary); margin-bottom: 16px; }
+    .emp-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .emp-card {
+      background: var(--clr-card); border-radius: var(--radius); box-shadow: var(--shadow);
+      border: 1px solid var(--clr-border); overflow: hidden; transition: border-color .2s;
+    }
+    .emp-card:hover { border-color: var(--clr-primary); }
+
+    .emp-header {
+      display: flex; align-items: center; gap: 16px; padding: 16px 20px; cursor: pointer;
+      transition: background .15s;
+    }
+    .emp-header:hover { background: #faf8f4; }
+
+    .emp-avatar {
+      width: 40px; height: 40px; border-radius: 50%; background: var(--clr-primary-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700; color: var(--clr-primary-dark); flex-shrink: 0;
+    }
+
+    .emp-info { flex: 1; min-width: 0; }
+    .emp-name { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .emp-bar-wrap { display: flex; align-items: center; gap: 10px; }
+    .emp-bar { flex: 1; height: 6px; background: var(--clr-border); border-radius: 3px; overflow: hidden; }
+    .emp-bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+    .emp-pct { font-size: 13px; font-weight: 600; color: var(--clr-primary-dark); min-width: 36px; text-align: right; }
+
+    .emp-score {
+      font-size: 13px; color: var(--clr-text-muted); text-align: center; min-width: 60px; flex-shrink: 0;
+    }
+    .emp-score strong { font-size: 16px; display: block; color: var(--clr-text); }
+
+    .emp-modules { display: flex; gap: 3px; flex-shrink: 0; flex-wrap: wrap; }
+    .mod-dot {
+      width: 18px; height: 18px; border-radius: 4px; position: relative; cursor: default;
+      transition: transform .15s;
+    }
+    .mod-dot:hover { transform: scale(1.3); z-index: 1; }
+    .mod-dot.s0 { background: var(--clr-border); }
+    .mod-dot.s1 { background: #d4dcc9; }
+    .mod-dot.s2 { background: #b0c4a0; }
+    .mod-dot.s3 { background: var(--clr-primary); }
+    .mod-dot .tooltip {
+      display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+      background: var(--clr-secondary); color: #fff; font-size: 11px; padding: 4px 8px;
+      border-radius: 6px; white-space: nowrap; pointer-events: none; z-index: 10;
+    }
+    .mod-dot:hover .tooltip { display: block; }
+
+    .expand-icon { font-size: 14px; color: var(--clr-text-muted); transition: transform .2s; flex-shrink: 0; padding: 0 4px; }
+    .emp-card.open .expand-icon { transform: rotate(180deg); }
+
+    /* EXPANDED DETAIL */
+    .emp-detail { display: none; border-top: 1px solid var(--clr-border); }
+    .emp-card.open .emp-detail { display: block; }
+
+    .mod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; background: var(--clr-border); }
+    .mod-item { background: var(--clr-card); padding: 14px 18px; }
+    .mod-item-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; line-height: 1.3; }
+    .mod-stages { display: flex; flex-direction: column; gap: 4px; }
+    .stage-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .stage-icon { width: 20px; text-align: center; }
+    .stage-label { color: var(--clr-text-muted); }
+    .stage-val { margin-left: auto; font-weight: 500; }
+    .stage-val.done { color: var(--clr-success); }
+    .stage-val.score { color: var(--clr-primary-dark); font-weight: 700; }
+    .stage-val.pending { color: var(--clr-border); }
+
+    /* LEGEND */
+    .legend { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--clr-text-muted); }
+    .legend-dot { width: 14px; height: 14px; border-radius: 3px; }
+
+    /* MOBILE */
+    @media (max-width: 600px) {
+      .app-header { padding: 0 14px; height: 50px; }
+      .main { padding: 18px 12px; }
+      .stats-row { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .stat-card { padding: 14px 10px; }
+      .stat-num { font-size: 28px; }
+      .stat-label { font-size: 11px; }
+      .emp-header { padding: 12px 14px; gap: 10px; flex-wrap: wrap; }
+      .emp-avatar { width: 34px; height: 34px; font-size: 14px; }
+      .emp-info { min-width: 120px; }
+      .emp-score { min-width: auto; }
+      .emp-modules { order: 10; width: 100%; padding-top: 8px; }
+      .mod-dot { width: 16px; height: 16px; }
+      .mod-grid { grid-template-columns: 1fr; }
+      .section-title { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-left">
+    <div class="brand">Mama's <span>Loft</span></div>
+    <div class="header-tag">Панель управления</div>
+  </div>
+  <button class="btn-refresh" id="refresh-btn">Обновить</button>
+</header>
+
+<div class="main">
+  <div class="loading" id="loading">Загрузка данных...</div>
+  <div id="content" style="display:none">
+
+    <div class="stats-row" id="stats-row"></div>
+
+    <h2 class="section-title">Прогресс сотрудников</h2>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--clr-border)"></div> Не начат</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#d4dcc9"></div> 1 из 3</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#b0c4a0"></div> 2 из 3</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--clr-primary)"></div> Пройден</div>
+    </div>
+
+    <div class="emp-list" id="emp-list"></div>
+  </div>
+</div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbyj0Bam_j4rXBV6GnPOTtkzE9IKstFn_TXAq_I8oGEnwywtBWFqiLt0q-QJBruvVZKF/exec';
+
+let DATA = null;
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+
+  try {
+    const r = await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({ route: 'admin_data' }),
+      headers: { 'Content-Type': 'text/plain' },
+      redirect: 'follow',
+    });
+    DATA = await r.json();
+    if (!DATA.ok) throw new Error(DATA.error || 'API error');
+    render();
+  } catch (e) {
+    document.getElementById('loading').textContent = 'Ошибка загрузки: ' + e.message;
+  }
+}
+
+function computeUserStats(userName) {
+  const up = DATA.progress[userName] || {};
+  let total = 0, done = 0, quizScores = [];
+
+  DATA.modules.forEach(mod => {
+    const mp = up[mod] || {};
+    ['lecture', 'mindmap', 'quiz'].forEach(s => {
+      total++;
+      if (mp[s] !== undefined) {
+        done++;
+        if (s === 'quiz') quizScores.push(mp[s]);
+      }
+    });
+  });
+
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+  const avg = quizScores.length > 0
+    ? Math.round(quizScores.reduce((a, b) => a + b, 0) / quizScores.length)
+    : null;
+  return { pct, avg, done, total };
+}
+
+function modStageCount(userName, mod) {
+  const mp = (DATA.progress[userName] || {})[mod] || {};
+  let c = 0;
+  if (mp.lecture) c++;
+  if (mp.mindmap) c++;
+  if (mp.quiz !== undefined) c++;
+  return c;
+}
+
+function render() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = '';
+
+  const users = DATA.users;
+  const allStats = users.map(u => ({ ...u, ...computeUserStats(u.name) }));
+
+  // Stats
+  const totalUsers = users.length;
+  const avgPct = Math.round(allStats.reduce((s, u) => s + u.pct, 0) / totalUsers);
+  const withScores = allStats.filter(u => u.avg !== null);
+  const avgScore = withScores.length > 0
+    ? Math.round(withScores.reduce((s, u) => s + u.avg, 0) / withScores.length)
+    : 0;
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-num">${totalUsers}</div>
+      <div class="stat-label">Сотрудников</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${avgPct}%</div>
+      <div class="stat-label">Средний прогресс</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${withScores.length > 0 ? avgScore + '%' : '—'}</div>
+      <div class="stat-label">Средний балл</div>
+    </div>
+  `;
+
+  // Sort by progress descending
+  allStats.sort((a, b) => b.pct - a.pct);
+
+  const list = document.getElementById('emp-list');
+  list.innerHTML = '';
+
+  allStats.forEach(u => {
+    const card = document.createElement('div');
+    card.className = 'emp-card';
+
+    const barColor = u.pct >= 80 ? 'var(--clr-success)' : u.pct >= 40 ? 'var(--clr-primary)' : u.pct > 0 ? 'var(--clr-warn)' : 'var(--clr-border)';
+
+    let dotsHtml = DATA.modules.map(mod => {
+      const sc = modStageCount(u.name, mod);
+      return `<div class="mod-dot s${sc}"><div class="tooltip">${esc(mod)} (${sc}/3)</div></div>`;
+    }).join('');
+
+    const up = DATA.progress[u.name] || {};
+
+    let detailHtml = DATA.modules.map(mod => {
+      const mp = up[mod] || {};
+      const lectureVal = mp.lecture ? '<span class="stage-val done">&#10003;</span>' : '<span class="stage-val pending">—</span>';
+      const mindmapVal = mp.mindmap ? '<span class="stage-val done">&#10003;</span>' : '<span class="stage-val pending">—</span>';
+      const quizVal = mp.quiz !== undefined
+        ? `<span class="stage-val score">${mp.quiz}%</span>`
+        : '<span class="stage-val pending">—</span>';
+
+      return `<div class="mod-item">
+        <div class="mod-item-title">${esc(mod)}</div>
+        <div class="mod-stages">
+          <div class="stage-row"><span class="stage-icon">&#128214;</span><span class="stage-label">Лекция</span>${lectureVal}</div>
+          <div class="stage-row"><span class="stage-icon">&#128506;</span><span class="stage-label">Карта знаний</span>${mindmapVal}</div>
+          <div class="stage-row"><span class="stage-icon">&#9989;</span><span class="stage-label">Тест</span>${quizVal}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="emp-header">
+        <div class="emp-avatar">${u.name.charAt(0)}</div>
+        <div class="emp-info">
+          <div class="emp-name">${esc(u.name)}</div>
+          <div class="emp-bar-wrap">
+            <div class="emp-bar"><div class="emp-bar-fill" style="width:${u.pct}%;background:${barColor}"></div></div>
+            <div class="emp-pct">${u.pct}%</div>
+          </div>
+        </div>
+        <div class="emp-score">Балл<strong>${u.avg !== null ? u.avg + '%' : '—'}</strong></div>
+        <div class="emp-modules">${dotsHtml}</div>
+        <div class="expand-icon">&#9660;</div>
+      </div>
+      <div class="emp-detail">
+        <div class="mod-grid">${detailHtml}</div>
+      </div>
+    `;
+
+    card.querySelector('.emp-header').addEventListener('click', () => {
+      card.classList.toggle('open');
+    });
+
+    list.appendChild(card);
+  });
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('refresh-btn').addEventListener('click', loadData);
+
+loadData();
+</script>
+</body>
+</html>
