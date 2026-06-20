@@ -20,9 +20,7 @@
       --clr-success:       #7fb069;
       --clr-success-bg:    #edf2e8;
       --clr-error:         #d97373;
-      --clr-error-bg:      #fdf0f0;
       --clr-warn:          #e2b93b;
-      --clr-warn-bg:       #fdf8e8;
       --font-heading:      'Inter', system-ui, sans-serif;
       --font-body:         'Inter', system-ui, sans-serif;
       --radius:            16px;
@@ -64,7 +62,7 @@
     .stat-num { font-family: var(--font-heading); font-size: 36px; font-weight: 700; color: var(--clr-primary-dark); line-height: 1.1; }
     .stat-label { font-size: 13px; color: var(--clr-text-muted); margin-top: 4px; }
 
-    /* EMPLOYEE TABLE */
+    /* EMPLOYEE LIST */
     .section-title { font-family: var(--font-heading); font-size: 20px; font-weight: 700; color: var(--clr-secondary); margin-bottom: 16px; }
     .emp-list { display: flex; flex-direction: column; gap: 10px; }
 
@@ -101,13 +99,14 @@
     .emp-modules { display: flex; gap: 3px; flex-shrink: 0; flex-wrap: wrap; }
     .mod-dot {
       width: 18px; height: 18px; border-radius: 4px; position: relative; cursor: default;
-      transition: transform .15s;
+      transition: transform .15s; display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700; color: #fff;
     }
     .mod-dot:hover { transform: scale(1.3); z-index: 1; }
-    .mod-dot.s0 { background: var(--clr-border); }
-    .mod-dot.s1 { background: #d4dcc9; }
-    .mod-dot.s2 { background: #b0c4a0; }
-    .mod-dot.s3 { background: var(--clr-primary); }
+    .mod-dot.none { background: var(--clr-border); color: transparent; }
+    .mod-dot.high { background: var(--clr-success); }
+    .mod-dot.mid  { background: var(--clr-warn); }
+    .mod-dot.low  { background: var(--clr-error); }
     .mod-dot .tooltip {
       display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
       background: var(--clr-secondary); color: #fff; font-size: 11px; padding: 4px 8px;
@@ -122,17 +121,17 @@
     .emp-detail { display: none; border-top: 1px solid var(--clr-border); }
     .emp-card.open .emp-detail { display: block; }
 
-    .mod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; background: var(--clr-border); }
-    .mod-item { background: var(--clr-card); padding: 14px 18px; }
-    .mod-item-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; line-height: 1.3; }
-    .mod-stages { display: flex; flex-direction: column; gap: 4px; }
-    .stage-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-    .stage-icon { width: 20px; text-align: center; }
-    .stage-label { color: var(--clr-text-muted); }
-    .stage-val { margin-left: auto; font-weight: 500; }
-    .stage-val.done { color: var(--clr-success); }
-    .stage-val.score { color: var(--clr-primary-dark); font-weight: 700; }
-    .stage-val.pending { color: var(--clr-border); }
+    .mod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1px; background: var(--clr-border); }
+    .mod-item {
+      background: var(--clr-card); padding: 12px 18px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .mod-item-title { font-size: 14px; font-weight: 500; line-height: 1.3; }
+    .mod-item-score { font-size: 15px; font-weight: 700; flex-shrink: 0; }
+    .mod-item-score.high { color: var(--clr-success); }
+    .mod-item-score.mid { color: var(--clr-warn); }
+    .mod-item-score.low { color: var(--clr-error); }
+    .mod-item-score.pending { color: var(--clr-border); }
 
     /* LEGEND */
     .legend { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -152,7 +151,7 @@
       .emp-info { min-width: 120px; }
       .emp-score { min-width: auto; }
       .emp-modules { order: 10; width: 100%; padding-top: 8px; }
-      .mod-dot { width: 16px; height: 16px; }
+      .mod-dot { width: 16px; height: 16px; font-size: 8px; }
       .mod-grid { grid-template-columns: 1fr; }
       .section-title { font-size: 18px; }
     }
@@ -174,13 +173,13 @@
 
     <div class="stats-row" id="stats-row"></div>
 
-    <h2 class="section-title">Прогресс сотрудников</h2>
+    <h2 class="section-title">Результаты тестов</h2>
 
     <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:var(--clr-border)"></div> Не начат</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#d4dcc9"></div> 1 из 3</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#b0c4a0"></div> 2 из 3</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--clr-primary)"></div> Пройден</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--clr-border)"></div> Не сдан</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--clr-error)"></div> &lt; 60%</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--clr-warn)"></div> 60–79%</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--clr-success)"></div> 80%+</div>
     </div>
 
     <div class="emp-list" id="emp-list"></div>
@@ -213,33 +212,29 @@ async function loadData() {
 
 function computeUserStats(userName) {
   const up = DATA.progress[userName] || {};
-  let total = 0, done = 0, quizScores = [];
+  const total = DATA.modules.length;
+  let passed = 0;
+  const scores = [];
 
   DATA.modules.forEach(mod => {
     const mp = up[mod] || {};
-    ['lecture', 'mindmap', 'quiz'].forEach(s => {
-      total++;
-      if (mp[s] !== undefined) {
-        done++;
-        if (s === 'quiz') quizScores.push(mp[s]);
-      }
-    });
+    if (mp.quiz !== undefined) {
+      passed++;
+      scores.push(mp.quiz);
+    }
   });
 
-  const pct = total > 0 ? Math.round(done / total * 100) : 0;
-  const avg = quizScores.length > 0
-    ? Math.round(quizScores.reduce((a, b) => a + b, 0) / quizScores.length)
+  const pct = total > 0 ? Math.round(passed / total * 100) : 0;
+  const avg = scores.length > 0
+    ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
     : null;
-  return { pct, avg, done, total };
+  return { pct, avg, passed, total };
 }
 
-function modStageCount(userName, mod) {
-  const mp = (DATA.progress[userName] || {})[mod] || {};
-  let c = 0;
-  if (mp.lecture) c++;
-  if (mp.mindmap) c++;
-  if (mp.quiz !== undefined) c++;
-  return c;
+function scoreClass(score) {
+  if (score >= 80) return 'high';
+  if (score >= 60) return 'mid';
+  return 'low';
 }
 
 function render() {
@@ -249,7 +244,6 @@ function render() {
   const users = DATA.users;
   const allStats = users.map(u => ({ ...u, ...computeUserStats(u.name) }));
 
-  // Stats
   const totalUsers = users.length;
   const avgPct = Math.round(allStats.reduce((s, u) => s + u.pct, 0) / totalUsers);
   const withScores = allStats.filter(u => u.avg !== null);
@@ -264,7 +258,7 @@ function render() {
     </div>
     <div class="stat-card">
       <div class="stat-num">${avgPct}%</div>
-      <div class="stat-label">Средний прогресс</div>
+      <div class="stat-label">Тестов сдано</div>
     </div>
     <div class="stat-card">
       <div class="stat-num">${withScores.length > 0 ? avgScore + '%' : '—'}</div>
@@ -272,7 +266,6 @@ function render() {
     </div>
   `;
 
-  // Sort by progress descending
   allStats.sort((a, b) => b.pct - a.pct);
 
   const list = document.getElementById('emp-list');
@@ -283,29 +276,29 @@ function render() {
     card.className = 'emp-card';
 
     const barColor = u.pct >= 80 ? 'var(--clr-success)' : u.pct >= 40 ? 'var(--clr-primary)' : u.pct > 0 ? 'var(--clr-warn)' : 'var(--clr-border)';
+    const up = DATA.progress[u.name] || {};
 
     let dotsHtml = DATA.modules.map(mod => {
-      const sc = modStageCount(u.name, mod);
-      return `<div class="mod-dot s${sc}"><div class="tooltip">${esc(mod)} (${sc}/3)</div></div>`;
+      const mp = up[mod] || {};
+      if (mp.quiz === undefined) {
+        return `<div class="mod-dot none"><div class="tooltip">${esc(mod)} — не сдан</div></div>`;
+      }
+      const cls = scoreClass(mp.quiz);
+      return `<div class="mod-dot ${cls}">${mp.quiz}<div class="tooltip">${esc(mod)} — ${mp.quiz}%</div></div>`;
     }).join('');
-
-    const up = DATA.progress[u.name] || {};
 
     let detailHtml = DATA.modules.map(mod => {
       const mp = up[mod] || {};
-      const lectureVal = mp.lecture ? '<span class="stage-val done">&#10003;</span>' : '<span class="stage-val pending">—</span>';
-      const mindmapVal = mp.mindmap ? '<span class="stage-val done">&#10003;</span>' : '<span class="stage-val pending">—</span>';
-      const quizVal = mp.quiz !== undefined
-        ? `<span class="stage-val score">${mp.quiz}%</span>`
-        : '<span class="stage-val pending">—</span>';
-
+      if (mp.quiz === undefined) {
+        return `<div class="mod-item">
+          <div class="mod-item-title">${esc(mod)}</div>
+          <div class="mod-item-score pending">—</div>
+        </div>`;
+      }
+      const cls = scoreClass(mp.quiz);
       return `<div class="mod-item">
         <div class="mod-item-title">${esc(mod)}</div>
-        <div class="mod-stages">
-          <div class="stage-row"><span class="stage-icon">&#128214;</span><span class="stage-label">Лекция</span>${lectureVal}</div>
-          <div class="stage-row"><span class="stage-icon">&#128506;</span><span class="stage-label">Карта знаний</span>${mindmapVal}</div>
-          <div class="stage-row"><span class="stage-icon">&#9989;</span><span class="stage-label">Тест</span>${quizVal}</div>
-        </div>
+        <div class="mod-item-score ${cls}">${mp.quiz}%</div>
       </div>`;
     }).join('');
 
@@ -316,7 +309,7 @@ function render() {
           <div class="emp-name">${esc(u.name)}</div>
           <div class="emp-bar-wrap">
             <div class="emp-bar"><div class="emp-bar-fill" style="width:${u.pct}%;background:${barColor}"></div></div>
-            <div class="emp-pct">${u.pct}%</div>
+            <div class="emp-pct">${u.passed}/${u.total}</div>
           </div>
         </div>
         <div class="emp-score">Балл<strong>${u.avg !== null ? u.avg + '%' : '—'}</strong></div>
