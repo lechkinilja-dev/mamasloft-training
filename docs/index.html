@@ -194,31 +194,6 @@
     .score-sub { font-size: 15px; color: var(--clr-text-muted); margin: 10px 0 26px; }
 
     /* ================================================================
-       SIM
-       ================================================================ */
-    .sim-brief { background: #f6f2ec; border-radius: var(--radius); padding: 14px 18px; margin-bottom: 18px; font-size: 14px; line-height: 1.6; }
-    .sim-brief strong { color: var(--clr-secondary); }
-    .sim-chat {
-      display: flex; flex-direction: column; gap: 11px;
-      max-height: 380px; overflow-y: auto; padding: 14px;
-      background: var(--clr-card); border: 1px solid var(--clr-border);
-      border-radius: var(--radius); margin-bottom: 14px;
-    }
-    .sim-msg { display: flex; gap: 8px; }
-    .sim-msg.staff { flex-direction: row-reverse; }
-    .sim-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--clr-border); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
-    .sim-bubble { max-width: 76%; padding: 9px 13px; border-radius: 14px; font-size: 14px; line-height: 1.55; }
-    .sim-msg.customer .sim-bubble { background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: 14px 14px 14px 4px; }
-    .sim-msg.staff    .sim-bubble { background: var(--clr-primary-dark); color: #fff; border-radius: 14px 14px 4px 14px; }
-    .sim-input-row { display: flex; gap: 9px; }
-    .sim-input-row textarea {
-      flex: 1; padding: 11px 13px; border: 2px solid var(--clr-border); border-radius: 8px;
-      font-size: 14px; resize: none; min-height: 68px; outline: none; font-family: var(--font-body); transition: border-color .2s;
-    }
-    .sim-input-row textarea:focus { border-color: var(--clr-primary); box-shadow: 0 0 0 3px rgba(139,158,126,.15); }
-    .typing { color: var(--clr-text-muted); font-size: 12px; font-style: italic; padding: 4px 8px; }
-
-    /* ================================================================
        MOBILE
        ================================================================ */
     @media (max-width: 600px) {
@@ -254,9 +229,6 @@
       .quiz-opt { padding: 12px 14px; font-size: 14px; }
       .score-num { font-size: 56px; }
 
-      .sim-chat { max-height: 300px; padding: 10px; }
-      .sim-bubble { max-width: 85%; font-size: 14px; }
-      .sim-input-row textarea { min-height: 52px; font-size: 14px; }
     }
 
     @media (max-width: 380px) {
@@ -315,7 +287,6 @@
     <button class="tab-btn active" data-tab="lecture">📖 Лекция</button>
     <button class="tab-btn"        data-tab="mindmap">🗺 Карта знаний</button>
     <button class="tab-btn"        data-tab="quiz">✅ Тест</button>
-    <button class="tab-btn"        data-tab="sim">💬 Тренажёр</button>
   </nav>
   <div class="tab-scroll">
 
@@ -345,17 +316,7 @@
       <div class="quiz-result" id="quiz-result">
         <div class="score-num" id="score-num"></div>
         <div class="score-sub" id="score-sub"></div>
-        <button class="btn-primary" id="quiz-to-sim-btn">Перейти к тренажёру →</button>
-      </div>
-    </div>
-
-    <!-- SIM -->
-    <div class="tab-panel" id="tab-sim">
-      <div class="sim-brief" id="sim-brief"></div>
-      <div class="sim-chat"  id="sim-chat"></div>
-      <div class="sim-input-row">
-        <textarea id="sim-input" placeholder="Напишите ответ покупателю…" rows="3"></textarea>
-        <button class="btn-primary" id="sim-send-btn">Отправить</button>
+        <button class="btn-primary" id="quiz-back-btn">К списку модулей →</button>
       </div>
     </div>
 
@@ -381,9 +342,8 @@ let S = {
   user:    null,   // {pin, name, role}
   modules: [],     // массив из content.json
   modIdx:  null,   // индекс текущего модуля
-  prog:    {},     // {topicTitle: {lecture, mindmap, quiz/*число*/, sim}}
+  prog:    {},     // {topicTitle: {lecture, mindmap, quiz/*число*/}}
   quiz:    null,   // {topicId, idx, answers:[bool]}
-  sim:     null,   // {topicId, messages:[{role,content}]}
 };
 
 /* ================================================================
@@ -404,19 +364,6 @@ function demoApi(route, body) {
   if (route === 'auth') return { ok: true, name: 'Демо-сотрудник', role: 'consultant' };
   if (route === 'progress_get') return { ok: true, progress: {} };
   if (route === 'progress' || route === 'test') return { ok: true };
-  if (route === 'sim') {
-    const brief = body.sim_brief || {};
-    const msgs = body.messages || [];
-    const turn = msgs.filter(m => m.role === 'user').length;
-    const replies = [
-      `Здравствуйте! ${brief.need || 'Мне нужна помощь с выбором.'}`,
-      brief.objections?.[0] || 'Хмм, я не уверена...',
-      brief.objections?.[1] || 'А это точно подойдёт?',
-      brief.objections?.[2] || 'Мне кажется, это дороговато.',
-      'Хорошо, вы меня убедили! Беру.',
-    ];
-    return { ok: true, reply: replies[Math.min(turn, replies.length - 1)] };
-  }
   return { ok: false, error: 'Unknown route' };
 }
 
@@ -508,7 +455,7 @@ function renderDash() {
   grid.innerHTML = '';
   S.modules.forEach((m, i) => {
     const p = S.prog[m.topic] || {};
-    const stages = ['lecture','mindmap','quiz','sim'];
+    const stages = ['lecture','mindmap','quiz'];
     const done = stages.filter(s => p[s] !== undefined && p[s] !== false).length;
     const pct  = Math.round(done / stages.length * 100);
 
@@ -522,7 +469,6 @@ function renderDash() {
         <span class="badge ${p.lecture  ? 'done':''}">📖 Лекция</span>
         <span class="badge ${p.mindmap  ? 'done':''}">🗺 Карта</span>
         <span class="badge ${p.quiz != null ? 'done':''}">✅ Тест${p.quiz != null ? ' '+p.quiz+'%' :''}</span>
-        <span class="badge ${p.sim      ? 'done':''}">💬 Тренажёр</span>
       </div>
     `;
     card.addEventListener('click', () => openModule(i));
@@ -554,7 +500,6 @@ function switchTab(tab) {
   if (tab === 'lecture') renderLecture(m);
   if (tab === 'mindmap') renderMindmap(m);
   if (tab === 'quiz')    renderQuiz(m);
-  if (tab === 'sim')     renderSim(m);
 }
 
 /* ================================================================
@@ -633,7 +578,7 @@ document.getElementById('quiz-next-btn').addEventListener('click', () => {
   if (S.quiz.idx < m.quiz.length) showQuestion(m);
   else finishQuiz(m);
 });
-document.getElementById('quiz-to-sim-btn').addEventListener('click', () => switchTab('sim'));
+document.getElementById('quiz-back-btn').addEventListener('click', () => { renderDash(); show('screen-dashboard'); });
 
 function renderQuiz(m) {
   const p = S.prog[m.topic] || {};
@@ -716,82 +661,6 @@ function showQuizResult(score) {
     score >= 60 ? '👍 Неплохо! Можно повторить лекцию.' :
                   '📚 Стоит перечитать материал ещё раз.';
   document.getElementById('quiz-result').classList.add('show');
-}
-
-/* ================================================================
-   SIM
-================================================================ */
-document.getElementById('sim-send-btn').addEventListener('click', sendSim);
-document.getElementById('sim-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendSim(); }
-});
-
-function renderSim(m) {
-  const brief = m.sim_brief || {};
-  document.getElementById('sim-brief').innerHTML =
-    `<strong>Персонаж:</strong> ${esc(brief.persona || '—')}<br/>` +
-    `<strong>Запрос:</strong> ${esc(brief.need || '—')}<br/>` +
-    `<strong>Критерии оценки:</strong>${(brief.rubric || []).map(r => `<br/>• ${esc(r)}`).join('')}`;
-
-  if (!S.sim || S.sim.topicId !== m.topic) {
-    S.sim = { topicId: m.topic, messages: [] };
-    document.getElementById('sim-chat').innerHTML = '';
-    // Показываем открывающую реплику покупателя (не отправляется в API)
-    addBubble('customer', brief.need ? `Добрый день! ${brief.need}` : 'Добрый день, могу я вам помочь?');
-  }
-}
-
-function addBubble(who, text) {
-  const chat = document.getElementById('sim-chat');
-  const d = document.createElement('div');
-  d.className = `sim-msg ${who}`;
-  d.innerHTML = `<div class="sim-avatar">${who === 'staff' ? '🧑' : '🛍️'}</div>
-    <div class="sim-bubble">${esc(text)}</div>`;
-  chat.appendChild(d);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-async function sendSim() {
-  const ta = document.getElementById('sim-input');
-  const text = ta.value.trim();
-  const btn = document.getElementById('sim-send-btn');
-  if (!text || btn.disabled) return;
-
-  ta.value = '';
-  addBubble('staff', text);
-  S.sim.messages.push({ role: 'user', content: text });
-
-  btn.disabled = true;
-  const typing = document.createElement('div');
-  typing.className = 'typing';
-  typing.textContent = 'Покупатель печатает…';
-  document.getElementById('sim-chat').appendChild(typing);
-  document.getElementById('sim-chat').scrollTop = 9999;
-
-  try {
-    const m = S.modules[S.modIdx];
-    const res = await api('sim', {
-      pin:       S.user.pin,
-      topic:     m.topic,
-      sim_brief: m.sim_brief,
-      messages:  S.sim.messages,
-    });
-    typing.remove();
-    const reply = res.reply || '…';
-    addBubble('customer', reply);
-    S.sim.messages.push({ role: 'assistant', content: reply });
-
-    ensureProg(m.topic);
-    if (!S.prog[m.topic].sim) {
-      S.prog[m.topic].sim = true; saveProgLocal();
-      api('progress', { pin: S.user.pin, topic: m.topic, stage: 'sim' }).catch(() => {});
-    }
-  } catch {
-    typing.remove();
-    addBubble('customer', '(Ошибка соединения — попробуйте ещё раз)');
-  } finally {
-    btn.disabled = false;
-  }
 }
 
 /* ================================================================
