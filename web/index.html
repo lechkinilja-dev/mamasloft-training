@@ -425,15 +425,18 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 localStorage.removeItem('tp_p');
 
 async function init() {
-  const r = await fetch(CFG.contentUrl);
-  S.modules = await r.json();
-
   const saved = localStorage.getItem('tp_u');
   if (saved) {
     S.user = JSON.parse(saved);
+    show('screen-dashboard');
+  }
+
+  const r = await fetch(CFG.contentUrl);
+  S.modules = await r.json();
+
+  if (S.user) {
     await loadProgress();
     renderDash();
-    show('screen-dashboard');
   }
 }
 

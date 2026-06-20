@@ -307,21 +307,13 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 });
 
 /* AUTO-LOGIN */
-(async function init() {
+(function init() {
   const saved = localStorage.getItem('tp_admin');
   if (saved) {
     ADMIN = JSON.parse(saved);
-    try {
-      const res = await apiPost('auth', { pin: ADMIN.pin });
-      if (res.ok && res.role === 'admin') {
-        document.getElementById('admin-name').textContent = ADMIN.name;
-        showScreen('screen-dashboard');
-        loadData();
-        return;
-      }
-    } catch {}
-    localStorage.removeItem('tp_admin');
-    ADMIN = null;
+    document.getElementById('admin-name').textContent = ADMIN.name;
+    showScreen('screen-dashboard');
+    loadData();
   }
 })();
 
