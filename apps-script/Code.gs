@@ -30,7 +30,9 @@ function doAuth(body) {
   for (var i = 0; i < data.length; i++) {
     var rowPin = String(data[i][2]).trim();
     if (rowPin === pin) {
-      return { ok: true, name: String(data[i][1]).trim(), role: 'consultant' };
+      var status = String(data[i][5] || '').trim();
+      var role = (status === 'Админ') ? 'admin' : 'consultant';
+      return { ok: true, name: String(data[i][1]).trim(), role: role };
     }
   }
   return { ok: false, error: 'Invalid PIN' };

@@ -20,6 +20,7 @@
       --clr-success:       #7fb069;
       --clr-success-bg:    #edf2e8;
       --clr-error:         #d97373;
+      --clr-error-bg:      #fdf0f0;
       --clr-warn:          #e2b93b;
       --font-heading:      'Inter', system-ui, sans-serif;
       --font-body:         'Inter', system-ui, sans-serif;
@@ -32,6 +33,36 @@
     body { font-family: var(--font-body); background: var(--clr-surface); color: var(--clr-text); min-height: 100vh; }
     button { font-family: var(--font-body); cursor: pointer; }
 
+    /* LOGIN */
+    .screen { display: none; min-height: 100vh; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    #screen-login {
+      align-items: center; justify-content: center;
+      background: #f6f2ec;
+    }
+    .login-card {
+      background: var(--clr-card); border-radius: var(--radius); box-shadow: var(--shadow-lg);
+      padding: 48px 40px; width: 100%; max-width: 380px; text-align: center;
+    }
+    .login-brand { font-family: var(--font-heading); font-size: 22px; font-weight: 700; color: var(--clr-secondary); letter-spacing: .02em; margin-bottom: 6px; }
+    .login-brand span { color: var(--clr-primary); }
+    .login-card h1 { font-size: 17px; font-weight: 500; color: var(--clr-text); margin-bottom: 4px; }
+    .login-card p { color: var(--clr-text-muted); font-size: 14px; margin-bottom: 28px; }
+    .pin-row { display: flex; gap: 8px; }
+    .pin-row input {
+      flex: 1; padding: 13px 12px; border: 2px solid var(--clr-border); border-radius: 8px;
+      font-size: 20px; letter-spacing: 8px; text-align: center; outline: none;
+      transition: border-color .2s; font-family: monospace;
+    }
+    .pin-row input:focus { border-color: var(--clr-primary); box-shadow: 0 0 0 3px rgba(139,158,126,.15); }
+    .btn-primary {
+      background: var(--clr-primary); color: #fff; border: none; border-radius: 10px;
+      padding: 13px 24px; font-size: 15px; font-weight: 600; transition: all .2s;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--clr-primary-dark); box-shadow: 0 4px 14px rgba(139,158,126,.3); }
+    .err { color: var(--clr-error); font-size: 13px; margin-top: 10px; min-height: 18px; }
+
     /* HEADER */
     .app-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -41,11 +72,13 @@
     .brand { font-family: var(--font-heading); font-size: 18px; font-weight: 700; color: #fdfbf7; letter-spacing: .02em; }
     .brand span { color: var(--clr-primary); }
     .header-tag { font-size: 12px; color: rgba(253,251,247,.5); background: rgba(253,251,247,.08); padding: 3px 10px; border-radius: 100px; }
-    .btn-refresh {
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .header-user { font-size: 13px; color: rgba(253,251,247,.6); }
+    .btn-header {
       background: none; border: 1px solid rgba(253,251,247,.2); border-radius: 6px;
       padding: 6px 14px; font-size: 13px; color: rgba(253,251,247,.6); transition: all .2s;
     }
-    .btn-refresh:hover { color: #fdfbf7; border-color: var(--clr-primary); }
+    .btn-header:hover { color: #fdfbf7; border-color: var(--clr-primary); }
 
     /* MAIN */
     .main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
@@ -140,6 +173,7 @@
 
     /* MOBILE */
     @media (max-width: 600px) {
+      .login-card { padding: 36px 24px; margin: 0 16px; }
       .app-header { padding: 0 14px; height: 50px; }
       .main { padding: 18px 12px; }
       .stats-row { grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -154,35 +188,58 @@
       .mod-dot { width: 16px; height: 16px; font-size: 8px; }
       .mod-grid { grid-template-columns: 1fr; }
       .section-title { font-size: 18px; }
+      .header-user { display: none; }
     }
   </style>
 </head>
 <body>
 
-<header class="app-header">
-  <div class="header-left">
-    <div class="brand">Mama's <span>Loft</span></div>
-    <div class="header-tag">Панель управления</div>
-  </div>
-  <button class="btn-refresh" id="refresh-btn">Обновить</button>
-</header>
-
-<div class="main">
-  <div class="loading" id="loading">Загрузка данных...</div>
-  <div id="content" style="display:none">
-
-    <div class="stats-row" id="stats-row"></div>
-
-    <h2 class="section-title">Результаты тестов</h2>
-
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:var(--clr-border)"></div> Не сдан</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--clr-error)"></div> &lt; 60%</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--clr-warn)"></div> 60–79%</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--clr-success)"></div> 80%+</div>
+<!-- LOGIN -->
+<div id="screen-login" class="screen active">
+  <div class="login-card">
+    <div class="login-brand">Mama's <span>Loft</span></div>
+    <h1>Панель управления</h1>
+    <p>Введите PIN-код администратора</p>
+    <div class="pin-row">
+      <input type="password" id="pin-input" maxlength="6" placeholder="••••••"
+             autocomplete="current-password" inputmode="numeric" />
+      <button class="btn-primary" id="login-btn">Войти</button>
     </div>
+    <div class="err" id="login-err"></div>
+  </div>
+</div>
 
-    <div class="emp-list" id="emp-list"></div>
+<!-- DASHBOARD -->
+<div id="screen-dashboard" class="screen">
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand">Mama's <span>Loft</span></div>
+      <div class="header-tag">Панель управления</div>
+    </div>
+    <div class="header-right">
+      <span class="header-user" id="admin-name"></span>
+      <button class="btn-header" id="refresh-btn">Обновить</button>
+      <button class="btn-header" id="logout-btn">Выйти</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="loading" id="loading">Загрузка данных...</div>
+    <div id="content" style="display:none">
+
+      <div class="stats-row" id="stats-row"></div>
+
+      <h2 class="section-title">Результаты тестов</h2>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--clr-border)"></div> Не сдан</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--clr-error)"></div> &lt; 60%</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--clr-warn)"></div> 60–79%</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--clr-success)"></div> 80%+</div>
+      </div>
+
+      <div class="emp-list" id="emp-list"></div>
+    </div>
   </div>
 </div>
 
@@ -190,19 +247,86 @@
 const API = 'https://script.google.com/macros/s/AKfycbyj0Bam_j4rXBV6GnPOTtkzE9IKstFn_TXAq_I8oGEnwywtBWFqiLt0q-QJBruvVZKF/exec';
 
 let DATA = null;
+let ADMIN = null;
 
+async function apiPost(route, body = {}) {
+  const r = await fetch(API, {
+    method: 'POST',
+    body: JSON.stringify({ route, ...body }),
+    headers: { 'Content-Type': 'text/plain' },
+    redirect: 'follow',
+  });
+  return r.json();
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* LOGIN */
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('pin-input').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
+
+async function doLogin() {
+  const pin = document.getElementById('pin-input').value.trim();
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  if (!pin) return;
+
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const res = await apiPost('auth', { pin });
+    if (!res.ok) { errEl.textContent = 'Неверный PIN.'; return; }
+    if (res.role !== 'admin') { errEl.textContent = 'Доступ только для администраторов.'; return; }
+    ADMIN = { pin, name: res.name };
+    localStorage.setItem('tp_admin', JSON.stringify(ADMIN));
+    document.getElementById('admin-name').textContent = ADMIN.name;
+    showScreen('screen-dashboard');
+    loadData();
+  } catch {
+    errEl.textContent = 'Ошибка соединения.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Войти';
+  }
+}
+
+/* LOGOUT */
+document.getElementById('logout-btn').addEventListener('click', () => {
+  ADMIN = null;
+  localStorage.removeItem('tp_admin');
+  document.getElementById('pin-input').value = '';
+  document.getElementById('login-err').textContent = '';
+  showScreen('screen-login');
+});
+
+/* AUTO-LOGIN */
+(async function init() {
+  const saved = localStorage.getItem('tp_admin');
+  if (saved) {
+    ADMIN = JSON.parse(saved);
+    try {
+      const res = await apiPost('auth', { pin: ADMIN.pin });
+      if (res.ok && res.role === 'admin') {
+        document.getElementById('admin-name').textContent = ADMIN.name;
+        showScreen('screen-dashboard');
+        loadData();
+        return;
+      }
+    } catch {}
+    localStorage.removeItem('tp_admin');
+    ADMIN = null;
+  }
+})();
+
+/* DATA */
 async function loadData() {
   document.getElementById('loading').style.display = 'block';
   document.getElementById('content').style.display = 'none';
 
   try {
-    const r = await fetch(API, {
-      method: 'POST',
-      body: JSON.stringify({ route: 'admin_data' }),
-      headers: { 'Content-Type': 'text/plain' },
-      redirect: 'follow',
-    });
-    DATA = await r.json();
+    DATA = await apiPost('admin_data');
     if (!DATA.ok) throw new Error(DATA.error || 'API error');
     render();
   } catch (e) {
@@ -334,8 +458,6 @@ function esc(s) {
 }
 
 document.getElementById('refresh-btn').addEventListener('click', loadData);
-
-loadData();
 </script>
 </body>
 </html>
