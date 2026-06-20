@@ -417,6 +417,8 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 /* ================================================================
    INIT
 ================================================================ */
+localStorage.removeItem('tp_p');
+
 async function init() {
   const r = await fetch(CFG.contentUrl);
   S.modules = await r.json();
