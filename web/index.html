@@ -435,14 +435,14 @@ async function loadProgress() {
     const r = await api('progress_get', { pin: S.user.pin });
     if (r.progress) S.prog = { ...S.prog, ...r.progress };
   } catch { /* offline — use localStorage */ }
-  const local = JSON.parse(localStorage.getItem('tp_p') || '{}');
+  const local = JSON.parse(localStorage.getItem('tp_p_' + S.user.pin) || '{}');
   // Merge: backend wins for numeric quiz scores, local fills gaps
   for (const [k, v] of Object.entries(local)) {
     if (!S.prog[k]) S.prog[k] = v;
   }
 }
 
-function saveProgLocal() { localStorage.setItem('tp_p', JSON.stringify(S.prog)); }
+function saveProgLocal() { localStorage.setItem('tp_p_' + S.user.pin, JSON.stringify(S.prog)); }
 
 function ensureProg(topic) { if (!S.prog[topic]) S.prog[topic] = {}; }
 
