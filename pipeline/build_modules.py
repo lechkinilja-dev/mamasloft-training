@@ -1,70 +1,111 @@
+"""Build deterministic employee-training modules from site-guide topics.
+
+The lecture is copied verbatim from ``topics.json``. Quizzes and simulation
+briefs are reviewed source-controlled data, so rebuilding never silently
+changes questions and never requires an external model or API key.
 """
-build_modules.py — для каждой темы из topics.json вызывает Claude и строит content.json.
 
-Запуск после fetch_doc.py:
-    python3 build_modules.py [--topic "Название темы"]  # без флага — все темы
-
-Вывод: pipeline/output/content.json — массив модулей со схемой:
-    {topic, lecture_html, mindmap:{nodes,edges}, mindmap_md,
-     quiz:[{q,options,correct,explain}], sim_brief:{persona,need,objections,rubric}}
-
-Assumptions:
-  - ANTHROPIC_API_KEY задан в .env или окружении.
-  - Используется модель claude-sonnet-4-6.
-  - При ошибке парсинга JSON для одной темы она пропускается (остальные сохраняются).
-  - Если content.json уже существует — дополняется новыми темами, не перезаписывается целиком.
-"""
+from __future__ import annotations
 
 import argparse
+import html
+from html.parser import HTMLParser
 import json
-import os
 from pathlib import Path
 
-import anthropic
-from dotenv import load_dotenv
+from site_quizzes import QUIZZES, SIM_BRIEFS
 
-load_dotenv()
 
-PROMPTS_DIR = Path(__file__).parent / "prompts"
 OUTPUT_DIR = Path(__file__).parent / "output"
-MODEL = "claude-sonnet-4-6"
-MAX_TOKENS = 4096
+PUBLIC_CONTENT_FILES = [
+    Path(__file__).parents[1] / "docs" / "content.json",
+    Path(__file__).parents[1] / "web" / "content.json",
+]
 
 
-def _load_prompt(name: str) -> str:
-    return (PROMPTS_DIR / f"{name}.txt").read_text(encoding="utf-8")
+class _HeadingParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.current: str | None = None
+        self.buffer: list[str] = []
+        self.headings: list[tuple[str, str]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {"h2", "h3"}:
+            self.current = tag
+            self.buffer = []
+
+    def handle_data(self, data: str) -> None:
+        if self.current:
+            self.buffer.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == self.current:
+            label = " ".join(html.unescape("".join(self.buffer)).split())
+            if label:
+                self.headings.append((tag, label))
+            self.current = None
+            self.buffer = []
 
 
-def _strip_fences(raw: str) -> str:
-    """Remove ```json ... ``` wrappers if Claude adds them despite instructions."""
-    raw = raw.strip()
-    if raw.startswith("```"):
-        lines = raw.splitlines()
-        raw = "\n".join(lines[1:])
-        if raw.endswith("```"):
-            raw = raw[: raw.rfind("```")]
-    return raw.strip()
+def _knowledge_map(topic: dict) -> tuple[dict, str]:
+    parser = _HeadingParser()
+    parser.feed(topic["lecture_html"])
+
+    # Prefer the article's main sections. Add selected subheads only when a
+    # short guide would otherwise have fewer than eight total nodes.
+    h2 = [(tag, label) for tag, label in parser.headings if tag == "h2"]
+    selected = h2[:14]
+    if len(selected) < 7:
+        seen = {label for _, label in selected}
+        for heading in parser.headings:
+            if heading[1] not in seen:
+                selected.append(heading)
+                seen.add(heading[1])
+            if len(selected) >= 7:
+                break
+
+    nodes = [{"id": "1", "label": topic["title"]}]
+    edges = []
+    markdown = [f"# {topic['title']}"]
+    parent_id = "1"
+    for index, (tag, label) in enumerate(selected, 2):
+        node_id = str(index)
+        nodes.append({"id": node_id, "label": label})
+        if tag == "h2":
+            parent_id = node_id
+            edges.append({"from": "1", "to": node_id})
+            markdown.append(f"## {label}")
+        else:
+            edges.append({"from": parent_id, "to": node_id})
+            markdown.append(f"### {label}")
+
+    if not 8 <= len(nodes) <= 15:
+        raise ValueError(
+            f"Knowledge map for {topic['slug']} has {len(nodes)} nodes; expected 8–15"
+        )
+    return {"nodes": nodes, "edges": edges}, "\n".join(markdown)
 
 
-def build_module(client: anthropic.Anthropic, topic: dict) -> dict:
-    system = _load_prompt("system")
-    user = (
-        _load_prompt("module")
-        .replace("{{TOPIC_TITLE}}", topic["title"])
-        .replace("{{TOPIC_CONTENT}}", topic["content"])
-    )
-
-    msg = client.messages.create(
-        model=MODEL,
-        max_tokens=MAX_TOKENS,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-
-    raw = _strip_fences(msg.content[0].text)
-    data = json.loads(raw)
-    data["topic"] = topic["title"]
-    return data
+def _module(topic: dict) -> dict:
+    slug = topic["slug"]
+    quiz = QUIZZES.get(slug)
+    if quiz is None:
+        raise KeyError(f"No reviewed quiz for {slug}")
+    if not 10 <= len(quiz) <= 15:
+        raise ValueError(f"Quiz for {slug} must contain 10–15 questions")
+    knowledge_map, mindmap_md = _knowledge_map(topic)
+    return {
+        "topic": topic["title"],
+        "slug": slug,
+        "source_url": topic["source_url"],
+        "source_commit": topic["source_commit"],
+        "lecture_html": topic["lecture_html"],
+        "mindmap": knowledge_map,
+        "mindmap_md": mindmap_md,
+        "quiz": quiz,
+        "sim_brief": SIM_BRIEFS[slug],
+    }
 
 
 def main() -> None:
@@ -73,47 +114,25 @@ def main() -> None:
     args = parser.parse_args()
 
     topics_path = OUTPUT_DIR / "topics.json"
-    if not topics_path.exists():
-        raise FileNotFoundError("Run fetch_doc.py first to generate pipeline/output/topics.json")
-
     topics = json.loads(topics_path.read_text(encoding="utf-8"))
     if args.topic:
-        topics = [t for t in topics if t["title"] == args.topic]
+        topics = [topic for topic in topics if topic["title"] == args.topic]
         if not topics:
             raise ValueError(f"Topic not found: {args.topic!r}")
 
-    # Load existing modules so we can skip already-built topics
+    modules = [_module(topic) for topic in topics]
+    output = json.dumps(modules, ensure_ascii=False, indent=2) + "\n"
     content_path = OUTPUT_DIR / "content.json"
-    existing: list[dict] = []
-    if content_path.exists():
-        existing = json.loads(content_path.read_text(encoding="utf-8"))
-    existing_titles = {m["topic"] for m in existing}
+    content_path.write_text(output, encoding="utf-8")
+    for public_path in PUBLIC_CONTENT_FILES:
+        public_path.write_text(output, encoding="utf-8")
 
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    modules = list(existing)
-
-    for i, topic in enumerate(topics, 1):
-        if topic["title"] in existing_titles and not args.topic:
-            print(f"[{i}/{len(topics)}] Skip (already built): {topic['title']}")
-            continue
-        print(f"[{i}/{len(topics)}] Building: {topic['title']}...")
-        try:
-            module = build_module(client, topic)
-            # Replace if re-building single topic
-            modules = [m for m in modules if m["topic"] != topic["title"]]
-            modules.append(module)
-            print(f"  ✓ lecture={len(module.get('lecture_html',''))}c  "
-                  f"quiz={len(module.get('quiz',[]))}q  "
-                  f"nodes={len(module.get('mindmap',{}).get('nodes',[]))}")
-        except json.JSONDecodeError as exc:
-            print(f"  ✗ JSON parse error: {exc}")
-        except Exception as exc:
-            print(f"  ✗ Error: {exc}")
-
-    content_path.write_text(
-        json.dumps(modules, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    print(f"\nDone. {len(modules)} modules → {content_path}")
+    for module in modules:
+        print(
+            f"  ✓ {module['topic']}: lecture={len(module['lecture_html'])} chars, "
+            f"quiz={len(module['quiz'])}, nodes={len(module['mindmap']['nodes'])}"
+        )
+    print(f"Saved {len(modules)} modules → {content_path} and public copies")
 
 
 if __name__ == "__main__":
