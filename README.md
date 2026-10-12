@@ -89,8 +89,15 @@ apps-script/Code.gs     # Google Sheets backend
 }
 ```
 
-Публикация выполняется отдельно: `git push` сохраняет историю, а Vercel
-разворачивается вручную, потому что проект не подключён к GitHub auto-deploy.
+Production размещён как статический сайт на сервере Mama's Loft:
+
+- курсы: `https://academy.analytics-mamasloft.ru/`;
+- админка: `https://academy.analytics-mamasloft.ru/admin.html`;
+- статический каталог: `/var/www/dashboards/academy/`;
+- nginx-блок: `deploy/academy.nginx.conf`.
+
+`git push` сохраняет историю, но не публикует платформу: production bundle из
+`docs/` переносится на сервер отдельным согласованным деплоем.
 
 Перед production-деплоем матрицу тем можно проверить без записи:
 
