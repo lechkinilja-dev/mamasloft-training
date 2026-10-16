@@ -72,6 +72,8 @@ def sanitize_html(value: str) -> str:
     parser = _Sanitizer()
     parser.feed(value)
     parser.close()
+    if parser.blocked_depth:
+        raise ValueError("В тексте обнаружен незакрытый небезопасный HTML-блок")
     return "".join(parser.output).strip()
 
 
@@ -124,6 +126,41 @@ def build_mindmap(topic: str, lecture_html: str, quiz: list[dict[str, Any]]) -> 
         edges.append({"from": "1", "to": node_id})
         markdown.append(f"## {label}")
     return {"nodes": nodes, "edges": edges}, "\n".join(markdown)
+
+
+def valid_mindmap(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+    nodes, edges = value.get("nodes"), value.get("edges")
+    if not isinstance(nodes, list) or not isinstance(edges, list) or not 8 <= len(nodes) <= 15:
+        return False
+    ids = [str(node.get("id", "")) for node in nodes if isinstance(node, dict)]
+    if len(ids) != len(nodes) or len(set(ids)) != len(ids) or not all(ids):
+        return False
+    if len(edges) != len(nodes) - 1:
+        return False
+    children: dict[str, list[str]] = {node_id: [] for node_id in ids}
+    has_parent: set[str] = set()
+    for edge in edges:
+        if not isinstance(edge, dict):
+            return False
+        parent, child = str(edge.get("from", "")), str(edge.get("to", ""))
+        if parent not in children or child not in children or child in has_parent:
+            return False
+        children[parent].append(child)
+        has_parent.add(child)
+    roots = [node_id for node_id in ids if node_id not in has_parent]
+    if len(roots) != 1:
+        return False
+    seen: set[str] = set()
+    stack = roots[:]
+    while stack:
+        current = stack.pop()
+        if current in seen:
+            return False
+        seen.add(current)
+        stack.extend(children[current])
+    return len(seen) == len(ids)
 
 
 def normalize_module(raw: dict[str, Any], strict: bool = False) -> dict[str, Any]:
@@ -179,9 +216,13 @@ def normalize_module(raw: dict[str, Any], strict: bool = False) -> dict[str, Any
             if question["correct"] not in range(4):
                 raise ValueError(f"Выберите правильный ответ в вопросе №{number}")
 
-    mindmap, mindmap_md = build_mindmap(module["topic"], module["lecture_html"], cleaned_quiz)
-    module["mindmap"] = mindmap
-    module["mindmap_md"] = mindmap_md
+    if valid_mindmap(module.get("mindmap")) and str(module.get("mindmap_md", "")).strip():
+        module["mindmap"] = deepcopy(module["mindmap"])
+        module["mindmap_md"] = str(module["mindmap_md"]).strip()
+    else:
+        mindmap, mindmap_md = build_mindmap(module["topic"], module["lecture_html"], cleaned_quiz)
+        module["mindmap"] = mindmap
+        module["mindmap_md"] = mindmap_md
     module.setdefault("sim_brief", {"persona": "", "need": "", "objections": [], "rubric": []})
     return module
 
@@ -234,7 +275,11 @@ class ContentStore:
             if action == "save":
                 if raw_module is None:
                     raise ValueError("Нет данных темы")
-                normalized = normalize_module(raw_module, strict=bool(raw_module.get("published")))
+                candidate = deepcopy(raw_module)
+                if index >= 0 and str(candidate.get("lecture_html", "")) != str(modules[index].get("lecture_html", "")):
+                    candidate.pop("mindmap", None)
+                    candidate.pop("mindmap_md", None)
+                normalized = normalize_module(candidate, strict=bool(candidate.get("published")))
                 duplicate = next(
                     (item for i, item in enumerate(modules) if i != index and item.get("slug") == normalized["slug"]),
                     None,

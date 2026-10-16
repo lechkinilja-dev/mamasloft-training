@@ -89,13 +89,25 @@ def rpc(body: dict[str, Any]) -> dict[str, Any]:
     if route in {"progress", "test"}:
         user = require_user(body)
         slug = str(body.get("slug", "")).strip()
-        live_slugs = {module["slug"] for module in CONTENT.public_modules()}
-        if slug not in live_slugs:
+        live_modules = {module["slug"]: module for module in CONTENT.public_modules()}
+        if slug not in live_modules:
             raise ValueError("Тема не опубликована")
         if route == "progress":
             saved = PROGRESS.mark(user["name"], slug, str(body.get("stage", "")))
         else:
-            saved = PROGRESS.mark(user["name"], slug, "quiz", int(body.get("score", 0)))
+            selections = body.get("selections")
+            quiz = live_modules[slug].get("quiz", [])
+            if not isinstance(selections, list) or len(selections) != len(quiz):
+                raise ValueError("Ответы теста заполнены не полностью")
+            try:
+                selected = [int(value) for value in selections]
+            except (TypeError, ValueError):
+                raise ValueError("Ответы теста заполнены некорректно")
+            if any(value < 0 or value >= len(quiz[index]["options"]) for index, value in enumerate(selected)):
+                raise ValueError("Ответы теста заполнены некорректно")
+            correct = sum(value == int(quiz[index]["correct"]) for index, value in enumerate(selected))
+            score = round(correct / len(quiz) * 100) if quiz else 0
+            saved = PROGRESS.mark(user["name"], slug, "quiz", score)
         return {"ok": True, "progress": saved}
 
     if route == "admin_data":
@@ -138,7 +150,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         origin = self.headers.get("Origin", "")
-        if origin == ALLOWED_ORIGIN or origin.startswith("http://127.0.0.1:") or origin.startswith("http://localhost:"):
+        allow_local = os.environ.get("ALLOW_LOCAL_ORIGIN", "false").lower() == "true"
+        if origin == ALLOWED_ORIGIN or (allow_local and origin.startswith(("http://127.0.0.1:", "http://localhost:"))):
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
         self.end_headers()

@@ -350,7 +350,7 @@ let S = {
   modules: [],     // массив из content.json
   modIdx:  null,   // индекс текущего модуля
   prog:    {},     // {topicTitle: {lecture, mindmap, quiz/*число*/}}
-  quiz:    null,   // {topicId, idx, answers:[bool]}
+  quiz:    null,   // {topicId, idx, answers:[bool], selections:[number]}
 };
 
 /* ================================================================
@@ -487,7 +487,7 @@ function renderDash() {
       <div class="badges">
         <span class="badge ${p.lecture  ? 'done':''}">📖 Лекция</span>
         <span class="badge ${p.mindmap  ? 'done':''}">🗺 Карта</span>
-        <span class="badge ${p.quiz != null ? 'done':''}">✅ Тест${p.quiz != null ? ' '+p.quiz+'%' :''}</span>
+        <span class="badge ${p.quiz != null ? 'done':''}">✅ Тест${p.quiz != null ? ' '+(p.best ?? p.quiz)+'%' :''}</span>
       </div>
     `;
     card.addEventListener('click', () => openModule(i));
@@ -600,15 +600,15 @@ document.getElementById('quiz-next-btn').addEventListener('click', () => {
 document.getElementById('quiz-back-btn').addEventListener('click', () => { renderDash(); show('screen-dashboard'); });
 document.getElementById('quiz-retry-btn').addEventListener('click', () => {
   const m = S.modules[S.modIdx];
-  S.quiz = { topicId: m.slug, idx: 0, answers: [] };
+  S.quiz = { topicId: m.slug, idx: 0, answers: [], selections: [] };
   showQuestion(m);
 });
 
 function renderQuiz(m) {
   const p = S.prog[m.slug] || {};
-  if (p.quiz != null && !S.quiz) { showQuizResult(p.quiz); return; }
+  if (p.quiz != null && !S.quiz) { showQuizResult(p.best ?? p.quiz); return; }
   if (!S.quiz || S.quiz.topicId !== m.slug) {
-    S.quiz = { topicId: m.slug, idx: 0, answers: [] };
+    S.quiz = { topicId: m.slug, idx: 0, answers: [], selections: [] };
   }
   showQuestion(m);
 }
@@ -644,6 +644,7 @@ function answerQ(idx, m) {
   const q = m.quiz[S.quiz.idx];
   const correct = idx === q.correct;
   S.quiz.answers[S.quiz.idx] = correct;
+  S.quiz.selections[S.quiz.idx] = idx;
 
   document.querySelectorAll('.quiz-opt').forEach((btn, i) => {
     btn.disabled = true;
@@ -667,8 +668,14 @@ async function finishQuiz(m) {
   const correct = S.quiz.answers.filter(Boolean).length;
   const score = Math.round(correct / m.quiz.length * 100);
 
-  ensureProg(m.slug); S.prog[m.slug].quiz = score; saveProgLocal();
-  api('test', { pin: S.user.pin, slug: m.slug, score, answers: S.quiz.answers }).catch(() => {});
+  ensureProg(m.slug);
+  S.prog[m.slug].quiz = score;
+  S.prog[m.slug].best = Math.max(score, S.prog[m.slug].best ?? 0);
+  saveProgLocal();
+  api('test', { pin: S.user.pin, slug: m.slug, selections: S.quiz.selections }).then(result => {
+    if (result.progress) S.prog[m.slug] = result.progress;
+    saveProgLocal();
+  }).catch(() => {});
 
   showQuizResult(score);
   S.quiz = null;

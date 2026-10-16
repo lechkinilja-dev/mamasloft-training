@@ -40,13 +40,18 @@ class ServerRpcTest(unittest.TestCase):
         self.assertEqual(sum(module["slug"].startswith("iva-design") for module in result["modules"]), 2)
 
     def test_employee_progress_and_attempts(self):
-        slug = server.rpc({"route": "content_get"})["modules"][0]["slug"]
+        module = server.rpc({"route": "content_get"})["modules"][0]
+        slug = module["slug"]
+        perfect = [question["correct"] for question in module["quiz"]]
+        one_wrong = perfect[:]
+        one_wrong[0] = (one_wrong[0] + 1) % 4
         server.rpc({"route": "progress", "pin": "user", "slug": slug, "stage": "lecture"})
-        server.rpc({"route": "test", "pin": "user", "slug": slug, "score": 70})
-        server.rpc({"route": "test", "pin": "user", "slug": slug, "score": 90})
+        server.rpc({"route": "test", "pin": "user", "slug": slug, "score": 0, "selections": perfect})
+        server.rpc({"route": "test", "pin": "user", "slug": slug, "score": 100, "selections": one_wrong})
         progress = server.rpc({"route": "progress_get", "pin": "user"})["progress"][slug]
         self.assertTrue(progress["lecture"])
-        self.assertEqual(progress["best"], 90)
+        self.assertEqual(progress["quiz"], 90)
+        self.assertEqual(progress["best"], 100)
         self.assertEqual(len(progress["attempts"]), 2)
 
     def test_admin_can_hide_and_publish_without_losing_topic(self):
