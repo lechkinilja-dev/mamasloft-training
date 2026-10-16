@@ -321,6 +321,7 @@
       <div class="quiz-result" id="quiz-result">
         <div class="score-num" id="score-num"></div>
         <div class="score-sub" id="score-sub"></div>
+        <button class="btn-primary" id="quiz-retry-btn">Пройти ещё раз</button>
         <button class="btn-primary" id="quiz-back-btn">К списку модулей →</button>
       </div>
     </div>
@@ -335,7 +336,8 @@
    content.json должен лежать рядом с index.html (или укажите полный URL).
 ================================================================ */
 const CFG = {
-  appsScriptUrl: 'https://script.google.com/macros/s/AKfycbyj0Bam_j4rXBV6GnPOTtkzE9IKstFn_TXAq_I8oGEnwywtBWFqiLt0q-QJBruvVZKF/exec',
+  authUrl:       'https://script.google.com/macros/s/AKfycbyj0Bam_j4rXBV6GnPOTtkzE9IKstFn_TXAq_I8oGEnwywtBWFqiLt0q-QJBruvVZKF/exec',
+  apiUrl:        '/academy-api/rpc',
   contentUrl:    'content.json',
   demoMode:      false,
 };
@@ -356,7 +358,8 @@ let S = {
 ================================================================ */
 async function api(route, body = {}) {
   if (CFG.demoMode) return demoApi(route, body);
-  const r = await fetch(CFG.appsScriptUrl, {
+  const url = route === 'auth' ? CFG.authUrl : CFG.apiUrl;
+  const r = await fetch(url, {
     method: 'POST',
     body: JSON.stringify({ route, ...body }),
     headers: { 'Content-Type': 'text/plain' },
@@ -431,8 +434,14 @@ async function init() {
     show('screen-dashboard');
   }
 
-  const r = await fetch(CFG.contentUrl);
-  S.modules = await r.json();
+  try {
+    const live = await api('content_get');
+    if (!live.ok || !Array.isArray(live.modules)) throw new Error(live.error || 'Content API error');
+    S.modules = live.modules;
+  } catch {
+    const r = await fetch(CFG.contentUrl);
+    S.modules = (await r.json()).filter(m => m.published !== false && !m.deleted);
+  }
 
   if (S.user) {
     await loadProgress();
@@ -464,7 +473,7 @@ function renderDash() {
   const grid = document.getElementById('modules-grid');
   grid.innerHTML = '';
   S.modules.forEach((m, i) => {
-    const p = S.prog[m.topic] || {};
+    const p = S.prog[m.slug] || {};
     const stages = ['lecture','mindmap','quiz'];
     const done = stages.filter(s => p[s] !== undefined && p[s] !== false).length;
     const pct  = Math.round(done / stages.length * 100);
@@ -517,8 +526,8 @@ function switchTab(tab) {
 ================================================================ */
 document.getElementById('lecture-next-btn').addEventListener('click', async () => {
   const m = S.modules[S.modIdx];
-  ensureProg(m.topic); S.prog[m.topic].lecture = true; saveProgLocal();
-  api('progress', { pin: S.user.pin, topic: m.topic, stage: 'lecture' }).catch(() => {});
+  ensureProg(m.slug); S.prog[m.slug].lecture = true; saveProgLocal();
+  api('progress', { pin: S.user.pin, slug: m.slug, stage: 'lecture' }).catch(() => {});
   switchTab('mindmap');
 });
 
@@ -531,8 +540,8 @@ function renderLecture(m) {
 ================================================================ */
 document.getElementById('mindmap-next-btn').addEventListener('click', async () => {
   const m = S.modules[S.modIdx];
-  ensureProg(m.topic); S.prog[m.topic].mindmap = true; saveProgLocal();
-  api('progress', { pin: S.user.pin, topic: m.topic, stage: 'mindmap' }).catch(() => {});
+  ensureProg(m.slug); S.prog[m.slug].mindmap = true; saveProgLocal();
+  api('progress', { pin: S.user.pin, slug: m.slug, stage: 'mindmap' }).catch(() => {});
   switchTab('quiz');
 });
 
@@ -589,12 +598,17 @@ document.getElementById('quiz-next-btn').addEventListener('click', () => {
   else finishQuiz(m);
 });
 document.getElementById('quiz-back-btn').addEventListener('click', () => { renderDash(); show('screen-dashboard'); });
+document.getElementById('quiz-retry-btn').addEventListener('click', () => {
+  const m = S.modules[S.modIdx];
+  S.quiz = { topicId: m.slug, idx: 0, answers: [] };
+  showQuestion(m);
+});
 
 function renderQuiz(m) {
-  const p = S.prog[m.topic] || {};
+  const p = S.prog[m.slug] || {};
   if (p.quiz != null && !S.quiz) { showQuizResult(p.quiz); return; }
-  if (!S.quiz || S.quiz.topicId !== m.topic) {
-    S.quiz = { topicId: m.topic, idx: 0, answers: [] };
+  if (!S.quiz || S.quiz.topicId !== m.slug) {
+    S.quiz = { topicId: m.slug, idx: 0, answers: [] };
   }
   showQuestion(m);
 }
@@ -653,8 +667,8 @@ async function finishQuiz(m) {
   const correct = S.quiz.answers.filter(Boolean).length;
   const score = Math.round(correct / m.quiz.length * 100);
 
-  ensureProg(m.topic); S.prog[m.topic].quiz = score; saveProgLocal();
-  api('test', { pin: S.user.pin, topic: m.topic, score, answers: S.quiz.answers }).catch(() => {});
+  ensureProg(m.slug); S.prog[m.slug].quiz = score; saveProgLocal();
+  api('test', { pin: S.user.pin, slug: m.slug, score, answers: S.quiz.answers }).catch(() => {});
 
   showQuizResult(score);
   S.quiz = null;

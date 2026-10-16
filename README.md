@@ -36,9 +36,10 @@ python3 pipeline/build_modules.py
 - `docs/content.json`;
 - `web/content.json`.
 
-В каждом модуле 10 проверенных вопросов. Тесты и сценарии консультаций
-хранятся в `pipeline/site_quizzes.py`; сборка детерминирована и не требует
-API-ключа внешней модели.
+В каждом модуле 10–15 проверенных вопросов. Тесты и сценарии консультаций
+по статьям хранятся в `pipeline/site_quizzes.py`, а два тренинга IVA Design —
+в `pipeline/iva_modules.py`. Сборка детерминирована и не требует API-ключа
+внешней модели.
 
 ## Локальная проверка
 
@@ -61,9 +62,10 @@ pipeline/
   build_modules.py      # topics + проверенные тесты → content.json
   site_quizzes.py       # 10 вопросов и сценарий по каждой теме
   output/
-docs/                   # production bundle для Vercel
+docs/                   # production bundle для academy.analytics-mamasloft.ru
 web/                    # локальная копия интерфейса
 apps-script/Code.gs     # Google Sheets backend
+server/                 # редактируемый контент и история прохождений
 ```
 
 ## Схема модуля
@@ -99,7 +101,14 @@ Production размещён как статический сайт на серв
 `git push` сохраняет историю, но не публикует платформу: production bundle из
 `docs/` переносится на сервер отдельным согласованным деплоем.
 
-Перед production-деплоем матрицу тем можно проверить без записи:
+Админка редактирует темы через same-origin API `/academy-api/rpc`. Текущая
+версия хранится на сервере в `content.json`, а перед каждым изменением API
+создаёт снимок в каталоге `revisions/`. Удаление темы мягкое: тема скрывается и
+остаётся доступной для восстановления вместе с историей результатов.
+
+Скрипт ниже оставлен только для архива старой Google Sheets-схемы. Новая
+версия пишет прогресс в серверное версионированное хранилище и не требует
+синхронизации матрицы тем:
 
 ```bash
 /Users/ilyadom/mamas-loft-finance/.venv/bin/python scripts/sync_training_topics.py

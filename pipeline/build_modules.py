@@ -13,6 +13,7 @@ from html.parser import HTMLParser
 import json
 from pathlib import Path
 
+from iva_modules import IVA_QUIZZES, IVA_SIM_BRIEFS, IVA_TOPICS
 from site_quizzes import QUIZZES, SIM_BRIEFS
 
 
@@ -89,7 +90,7 @@ def _knowledge_map(topic: dict) -> tuple[dict, str]:
 
 def _module(topic: dict) -> dict:
     slug = topic["slug"]
-    quiz = QUIZZES.get(slug)
+    quiz = {**QUIZZES, **IVA_QUIZZES}.get(slug)
     if quiz is None:
         raise KeyError(f"No reviewed quiz for {slug}")
     if not 10 <= len(quiz) <= 15:
@@ -104,7 +105,9 @@ def _module(topic: dict) -> dict:
         "mindmap": knowledge_map,
         "mindmap_md": mindmap_md,
         "quiz": quiz,
-        "sim_brief": SIM_BRIEFS[slug],
+        "sim_brief": {**SIM_BRIEFS, **IVA_SIM_BRIEFS}[slug],
+        "category": topic.get("category", "Статьи"),
+        "published": True,
     }
 
 
@@ -114,7 +117,7 @@ def main() -> None:
     args = parser.parse_args()
 
     topics_path = OUTPUT_DIR / "topics.json"
-    topics = json.loads(topics_path.read_text(encoding="utf-8"))
+    topics = json.loads(topics_path.read_text(encoding="utf-8")) + IVA_TOPICS
     if args.topic:
         topics = [topic for topic in topics if topic["title"] == args.topic]
         if not topics:
