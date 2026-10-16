@@ -80,6 +80,7 @@ class ContentStoreTest(unittest.TestCase):
             root = Path(temp)
             seed = root / "seed.json"
             module = valid_module()
+            module["lecture_html"] += "<p>Mama's Loft — проверка кавычек.</p>"
             module["mindmap"] = {
                 "nodes": [{"id": str(i), "label": f"Узел {i}"} for i in range(1, 9)],
                 "edges": [{"from": "1", "to": str(i)} for i in range(2, 9)],
@@ -89,8 +90,13 @@ class ContentStoreTest(unittest.TestCase):
             store = ContentStore(root / "data", seed)
             saved = store.admin_payload()["modules"][0]
             self.assertEqual(saved["mindmap_md"], module["mindmap_md"])
+            browser_serialized = json.loads(json.dumps(saved))
+            browser_serialized["lecture_html"] = browser_serialized["lecture_html"].replace("&#x27;", "'")
+            unchanged = store.mutate("save", browser_serialized, "tema", 1, "Илья")["modules"][0]
+            self.assertEqual(unchanged["mindmap_md"], module["mindmap_md"])
+            saved = unchanged
             saved["lecture_html"] += "<h2>Новый раздел</h2><p>Текст</p>"
-            changed = store.mutate("save", saved, "tema", 1, "Илья")["modules"][0]
+            changed = store.mutate("save", saved, "tema", 2, "Илья")["modules"][0]
             self.assertNotEqual(changed["mindmap_md"], module["mindmap_md"])
 
     def test_progress_keeps_attempt_history_and_best_score(self) -> None:

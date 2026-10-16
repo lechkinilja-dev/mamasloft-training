@@ -276,7 +276,8 @@ class ContentStore:
                 if raw_module is None:
                     raise ValueError("Нет данных темы")
                 candidate = deepcopy(raw_module)
-                if index >= 0 and str(candidate.get("lecture_html", "")) != str(modules[index].get("lecture_html", "")):
+                candidate["lecture_html"] = sanitize_html(str(candidate.get("lecture_html", "")))
+                if index >= 0 and candidate["lecture_html"] != str(modules[index].get("lecture_html", "")):
                     candidate.pop("mindmap", None)
                     candidate.pop("mindmap_md", None)
                 normalized = normalize_module(candidate, strict=bool(candidate.get("published")))
